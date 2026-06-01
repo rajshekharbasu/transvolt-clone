@@ -19,3 +19,6 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+
+# Local tools
+gh_2.93.0_macOS_arm64/
