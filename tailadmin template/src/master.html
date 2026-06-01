@@ -1,0 +1,1099 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
+    />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Master Configurations | TransVolt</title>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  </head>
+  <body
+    x-data="{ page: 'master', 'loaded': true, 'darkMode': false, 'stickyMenu': false, 'sidebarToggle': false, 'scrollTop': false }"
+    x-init="
+         darkMode = JSON.parse(localStorage.getItem('darkMode'));
+         $watch('darkMode', value => localStorage.setItem('darkMode', JSON.stringify(value)))"
+    :class="{'dark bg-gray-900': darkMode === true}"
+  >
+    <!-- ===== Preloader Start ===== -->
+    <include src="./partials/preloader.html"></include>
+    <!-- ===== Preloader End ===== -->
+
+    <!-- ===== Page Wrapper Start ===== -->
+    <div class="flex h-screen overflow-hidden">
+      <!-- ===== Sidebar Start ===== -->
+      <include src="./partials/sidebar.html"></include>
+      <!-- ===== Sidebar End ===== -->
+
+      <!-- ===== Content Area Start ===== -->
+      <div
+        class="relative flex flex-col flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900"
+      >
+        <!-- Small Device Overlay Start -->
+        <include src="./partials/overlay.html" />
+        <!-- Small Device Overlay End -->
+
+        <!-- ===== Header Start ===== -->
+        <include src="./partials/header.html" />
+        <!-- ===== Header End ===== -->
+
+        <!-- ===== Main Content Start ===== -->
+        <main x-data="masterApp()" x-init="initApp()">
+          <div class="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6 flex flex-col gap-6">
+            
+            <!-- Header Title -->
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 class="text-title-md2 font-bold text-gray-800 dark:text-white/90">Master Configurations</h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage global system settings, types, lists, and checklists.</p>
+              </div>
+            </div>
+
+            <!-- Toast Notifications -->
+            <div class="fixed top-5 right-5 z-[9999] flex flex-col gap-2">
+              <template x-if="successMessage">
+                <div class="flex items-center gap-3 bg-success-600 text-white px-4 py-3 rounded-xl shadow-lg animate-fade-in-right">
+                  <i class="ph ph-check-circle text-lg"></i>
+                  <span class="text-sm font-semibold" x-text="successMessage"></span>
+                </div>
+              </template>
+              <template x-if="errorMessage">
+                <div class="flex items-center gap-3 bg-error-600 text-white px-4 py-3 rounded-xl shadow-lg animate-fade-in-right">
+                  <i class="ph ph-warning-circle text-lg"></i>
+                  <span class="text-sm font-semibold" x-text="errorMessage"></span>
+                </div>
+              </template>
+            </div>
+
+            <!-- Master Console Layout -->
+            <div>
+              
+              <!-- 1. Grid of Categories (Visible when activeCategory is 'grid') -->
+              <template x-if="activeCategory === 'grid'">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-scale-up">
+                  <template x-for="cat in categories" :key="cat.key">
+                    <button
+                      type="button"
+                      @click="setCategory(cat.key)"
+                      class="group text-left cursor-pointer rounded-2xl border border-gray-200 bg-white p-6 shadow-sm hover:shadow-md transition-all duration-300 dark:border-gray-800 dark:bg-white/[0.03] hover:-translate-y-1 hover:border-brand-500/30 flex flex-col gap-4 w-full"
+                    >
+                      <div class="flex items-center justify-between w-full">
+                        <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-brand-500/10 text-brand-500 dark:bg-brand-500/20 transition-colors group-hover:bg-brand-500 group-hover:text-white">
+                          <i class="ph text-2xl" :class="cat.icon"></i>
+                        </div>
+                        <span class="text-gray-400 group-hover:text-brand-500 transition-colors">
+                          <i class="ph ph-arrow-right text-lg"></i>
+                        </span>
+                      </div>
+                      <div>
+                        <h4 class="text-base font-bold text-gray-800 dark:text-white group-hover:text-brand-500 transition-colors" x-text="cat.label"></h4>
+                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1 line-clamp-2" x-text="cat.desc"></p>
+                      </div>
+                    </button>
+                  </template>
+                </div>
+              </template>
+
+              <!-- 2. Detail Workspace (Visible when activeCategory is not 'grid') -->
+              <template x-if="activeCategory !== 'grid'">
+                <div class="w-full rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] flex flex-col gap-4 animate-scale-up">
+                  
+                  <!-- Active Header & Actions Bar -->
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-100 dark:border-gray-800">
+                    <div class="flex items-center gap-3">
+                      <button
+                        type="button"
+                        @click="backToGrid()"
+                        class="p-2 text-gray-500 hover:text-brand-500 dark:text-gray-400 dark:hover:text-brand-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/40 transition-colors flex items-center justify-center"
+                        title="Back to Categories"
+                      >
+                        <i class="ph ph-arrow-left text-xl"></i>
+                      </button>
+                      <div>
+                        <h3 class="text-lg font-bold text-gray-800 dark:text-white" x-text="getActiveCategoryLabel()"></h3>
+                        <p class="text-xs text-gray-400 mt-1" x-text="getActiveCategoryDescription()"></p>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-3 shrink-0">
+                      <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                          <i class="ph ph-magnifying-glass text-md"></i>
+                        </span>
+                        <input
+                          type="text"
+                          placeholder="Search items..."
+                          x-model="searchQuery"
+                          class="pl-9 pr-4 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg text-xs bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/10"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        @click="openAddModal()"
+                        class="px-4 py-1.5 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm"
+                      >
+                        <i class="ph ph-plus-circle text-base"></i>
+                        Add New
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- API Loader -->
+                  <div x-show="loading" class="flex flex-col items-center justify-center py-16 gap-2 text-gray-400">
+                    <div class="w-8 h-8 rounded-full border-4 border-brand-500/25 border-t-brand-500 animate-spin"></div>
+                    <span class="text-sm font-medium">Fetching details...</span>
+                  </div>
+
+                  <!-- Entity Table View -->
+                  <div x-show="!loading" class="overflow-x-auto">
+                  
+                  <!-- 1. Vehicle Types -->
+                  <template x-if="activeCategory === 'vehicle-types'">
+                    <table class="w-full text-left border-collapse text-sm">
+                      <thead>
+                        <tr class="border-b border-gray-100 dark:border-gray-800 text-gray-400 text-xs font-semibold uppercase">
+                          <th class="py-3 px-4">Name</th>
+                          <th class="py-3 px-4">Code</th>
+                          <th class="py-3 px-4">Brand</th>
+                          <th class="py-3 px-4">Capacity</th>
+                          <th class="py-3 px-4">Status</th>
+                          <th class="py-3 px-4 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <template x-for="item in filteredVehicleTypes" :key="item.id">
+                          <tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/20 text-gray-700 dark:text-gray-300">
+                            <td class="py-3.5 px-4 font-bold text-gray-900 dark:text-white" x-text="item.name"></td>
+                            <td class="py-3.5 px-4 text-xs font-mono text-gray-400" x-text="item.code"></td>
+                            <td class="py-3.5 px-4" x-text="item.brand"></td>
+                            <td class="py-3.5 px-4" x-text="item.capacity"></td>
+                            <td class="py-3.5 px-4">
+                              <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                                :class="item.is_active ? 'bg-success-50 text-success-600 dark:bg-success-500/10 dark:text-success-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'"
+                                x-text="item.is_active ? 'Active' : 'Inactive'"></span>
+                            </td>
+                            <td class="py-3.5 px-4 text-right">
+                              <div class="inline-flex items-center gap-1">
+                                <button @click="openEditModal(item)" class="p-1.5 text-gray-400 hover:text-brand-500 dark:hover:text-brand-400"><i class="ph ph-pencil-simple text-lg"></i></button>
+                                <button @click="deleteConfirm(item.id)" class="p-1.5 text-gray-400 hover:text-error-500"><i class="ph ph-trash text-lg"></i></button>
+                              </div>
+                            </td>
+                          </tr>
+                        </template>
+                      </tbody>
+                    </table>
+                  </template>
+
+                  <!-- 2. Shifts -->
+                  <template x-if="activeCategory === 'shifts'">
+                    <table class="w-full text-left border-collapse text-sm">
+                      <thead>
+                        <tr class="border-b border-gray-100 dark:border-gray-800 text-gray-400 text-xs font-semibold uppercase">
+                          <th class="py-3 px-4">Shift Name</th>
+                          <th class="py-3 px-4">Start Time</th>
+                          <th class="py-3 px-4">End Time</th>
+                          <th class="py-3 px-4">Status</th>
+                          <th class="py-3 px-4 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <template x-for="item in filteredShifts" :key="item.id">
+                          <tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/20 text-gray-700 dark:text-gray-300">
+                            <td class="py-3.5 px-4 font-bold text-gray-900 dark:text-white" x-text="item.name"></td>
+                            <td class="py-3.5 px-4" x-text="item.start_time"></td>
+                            <td class="py-3.5 px-4" x-text="item.end_time"></td>
+                            <td class="py-3.5 px-4">
+                              <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                                :class="item.is_active ? 'bg-success-50 text-success-600 dark:bg-success-500/10 dark:text-success-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'"
+                                x-text="item.is_active ? 'Active' : 'Inactive'"></span>
+                            </td>
+                            <td class="py-3.5 px-4 text-right">
+                              <div class="inline-flex items-center gap-1">
+                                <button @click="openEditModal(item)" class="p-1.5 text-gray-400 hover:text-brand-500 dark:hover:text-brand-400"><i class="ph ph-pencil-simple text-lg"></i></button>
+                                <button @click="deleteConfirm(item.id)" class="p-1.5 text-gray-400 hover:text-error-500"><i class="ph ph-trash text-lg"></i></button>
+                              </div>
+                            </td>
+                          </tr>
+                        </template>
+                      </tbody>
+                    </table>
+                  </template>
+
+                  <!-- 3. Event Master -->
+                  <template x-if="activeCategory === 'event-master'">
+                    <table class="w-full text-left border-collapse text-sm">
+                      <thead>
+                        <tr class="border-b border-gray-100 dark:border-gray-800 text-gray-400 text-xs font-semibold uppercase">
+                          <th class="py-3 px-4">Event Name</th>
+                          <th class="py-3 px-4">Code</th>
+                          <th class="py-3 px-4">Severity</th>
+                          <th class="py-3 px-4">Status</th>
+                          <th class="py-3 px-4 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <template x-for="item in filteredEventMaster" :key="item.id">
+                          <tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/20 text-gray-700 dark:text-gray-300">
+                            <td class="py-3.5 px-4 font-bold text-gray-900 dark:text-white" x-text="item.name"></td>
+                            <td class="py-3.5 px-4 text-xs font-mono text-gray-400" x-text="item.code"></td>
+                            <td class="py-3.5 px-4">
+                              <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-bold"
+                                :class="{
+                                  'bg-error-50 text-error-600 dark:bg-error-500/10 dark:text-error-400': item.severity === 'Critical',
+                                  'bg-warning-50 text-warning-600 dark:bg-warning-500/10 dark:text-warning-400': item.severity === 'Warning',
+                                  'bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400': item.severity === 'Info'
+                                }"
+                                x-text="item.severity"></span>
+                            </td>
+                            <td class="py-3.5 px-4">
+                              <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                                :class="item.is_active ? 'bg-success-50 text-success-600 dark:bg-success-500/10 dark:text-success-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'"
+                                x-text="item.is_active ? 'Active' : 'Inactive'"></span>
+                            </td>
+                            <td class="py-3.5 px-4 text-right">
+                              <div class="inline-flex items-center gap-1">
+                                <button @click="openEditModal(item)" class="p-1.5 text-gray-400 hover:text-brand-500 dark:hover:text-brand-400"><i class="ph ph-pencil-simple text-lg"></i></button>
+                                <button @click="deleteConfirm(item.id)" class="p-1.5 text-gray-400 hover:text-error-500"><i class="ph ph-trash text-lg"></i></button>
+                              </div>
+                            </td>
+                          </tr>
+                        </template>
+                      </tbody>
+                    </table>
+                  </template>
+
+                  <!-- 4. Event Policies -->
+                  <template x-if="activeCategory === 'event-policies'">
+                    <table class="w-full text-left border-collapse text-sm">
+                      <thead>
+                        <tr class="border-b border-gray-100 dark:border-gray-800 text-gray-400 text-xs font-semibold uppercase">
+                          <th class="py-3 px-4">Policy Name</th>
+                          <th class="py-3 px-4">Trigger Event</th>
+                          <th class="py-3 px-4">Notifications</th>
+                          <th class="py-3 px-4">Status</th>
+                          <th class="py-3 px-4 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <template x-for="item in filteredEventPolicies" :key="item.id">
+                          <tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/20 text-gray-700 dark:text-gray-300">
+                            <td class="py-3.5 px-4 font-bold text-gray-900 dark:text-white" x-text="item.name"></td>
+                            <td class="py-3.5 px-4 text-xs font-mono text-gray-500 dark:text-gray-400" x-text="item.event_code"></td>
+                            <td class="py-3.5 px-4 text-gray-500" x-text="item.notify_via"></td>
+                            <td class="py-3.5 px-4">
+                              <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                                :class="item.is_active ? 'bg-success-50 text-success-600 dark:bg-success-500/10 dark:text-success-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'"
+                                x-text="item.is_active ? 'Active' : 'Inactive'"></span>
+                            </td>
+                            <td class="py-3.5 px-4 text-right">
+                              <div class="inline-flex items-center gap-1">
+                                <button @click="openEditModal(item)" class="p-1.5 text-gray-400 hover:text-brand-500 dark:hover:text-brand-400"><i class="ph ph-pencil-simple text-lg"></i></button>
+                                <button @click="deleteConfirm(item.id)" class="p-1.5 text-gray-400 hover:text-error-500"><i class="ph ph-trash text-lg"></i></button>
+                              </div>
+                            </td>
+                          </tr>
+                        </template>
+                      </tbody>
+                    </table>
+                  </template>
+
+                  <!-- 5. Item Categories -->
+                  <template x-if="activeCategory === 'item-categories'">
+                    <table class="w-full text-left border-collapse text-sm">
+                      <thead>
+                        <tr class="border-b border-gray-100 dark:border-gray-800 text-gray-400 text-xs font-semibold uppercase">
+                          <th class="py-3 px-4">Category Name</th>
+                          <th class="py-3 px-4">Code</th>
+                          <th class="py-3 px-4">Status</th>
+                          <th class="py-3 px-4 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <template x-for="item in filteredItemCategories" :key="item.id">
+                          <tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/20 text-gray-700 dark:text-gray-300">
+                            <td class="py-3.5 px-4 font-bold text-gray-900 dark:text-white" x-text="item.name"></td>
+                            <td class="py-3.5 px-4 text-xs font-mono text-gray-400" x-text="item.code"></td>
+                            <td class="py-3.5 px-4">
+                              <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                                :class="item.is_active ? 'bg-success-50 text-success-600 dark:bg-success-500/10 dark:text-success-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'"
+                                x-text="item.is_active ? 'Active' : 'Inactive'"></span>
+                            </td>
+                            <td class="py-3.5 px-4 text-right">
+                              <div class="inline-flex items-center gap-1">
+                                <button @click="openEditModal(item)" class="p-1.5 text-gray-400 hover:text-brand-500 dark:hover:text-brand-400"><i class="ph ph-pencil-simple text-lg"></i></button>
+                                <button @click="deleteConfirm(item.id)" class="p-1.5 text-gray-400 hover:text-error-500"><i class="ph ph-trash text-lg"></i></button>
+                              </div>
+                            </td>
+                          </tr>
+                        </template>
+                      </tbody>
+                    </table>
+                  </template>
+
+                  <!-- 6. Checklist Categories -->
+                  <template x-if="activeCategory === 'checklist-categories'">
+                    <table class="w-full text-left border-collapse text-sm">
+                      <thead>
+                        <tr class="border-b border-gray-100 dark:border-gray-800 text-gray-400 text-xs font-semibold uppercase">
+                          <th class="py-3 px-4">Category Name</th>
+                          <th class="py-3 px-4">Code</th>
+                          <th class="py-3 px-4">Description</th>
+                          <th class="py-3 px-4">Status</th>
+                          <th class="py-3 px-4 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <template x-for="item in filteredChecklistCategories" :key="item.id">
+                          <tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/20 text-gray-700 dark:text-gray-300">
+                            <td class="py-3.5 px-4 font-bold text-gray-900 dark:text-white" x-text="item.name"></td>
+                            <td class="py-3.5 px-4 text-xs font-mono text-gray-400" x-text="item.code"></td>
+                            <td class="py-3.5 px-4 text-gray-500" x-text="item.description"></td>
+                            <td class="py-3.5 px-4">
+                              <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                                :class="item.is_active ? 'bg-success-50 text-success-600 dark:bg-success-500/10 dark:text-success-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'"
+                                x-text="item.is_active ? 'Active' : 'Inactive'"></span>
+                            </td>
+                            <td class="py-3.5 px-4 text-right">
+                              <div class="inline-flex items-center gap-1">
+                                <button @click="openEditModal(item)" class="p-1.5 text-gray-400 hover:text-brand-500 dark:hover:text-brand-400"><i class="ph ph-pencil-simple text-lg"></i></button>
+                                <button @click="deleteConfirm(item.id)" class="p-1.5 text-gray-400 hover:text-error-500"><i class="ph ph-trash text-lg"></i></button>
+                              </div>
+                            </td>
+                          </tr>
+                        </template>
+                      </tbody>
+                    </table>
+                  </template>
+
+                  <!-- 7. Checklist Templates -->
+                  <template x-if="activeCategory === 'checklist-templates'">
+                    <table class="w-full text-left border-collapse text-sm">
+                      <thead>
+                        <tr class="border-b border-gray-100 dark:border-gray-800 text-gray-400 text-xs font-semibold uppercase">
+                          <th class="py-3 px-4">Template Name</th>
+                          <th class="py-3 px-4">Category</th>
+                          <th class="py-3 px-4">Questions</th>
+                          <th class="py-3 px-4">Status</th>
+                          <th class="py-3 px-4 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <template x-for="item in filteredChecklistTemplates" :key="item.id">
+                          <tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/20 text-gray-700 dark:text-gray-300">
+                            <td class="py-3.5 px-4 font-bold text-gray-900 dark:text-white" x-text="item.name"></td>
+                            <td class="py-3.5 px-4 text-gray-500" x-text="item.category_name"></td>
+                            <td class="py-3.5 px-4 text-xs font-mono text-gray-400" x-text="item.questions_count"></td>
+                            <td class="py-3.5 px-4">
+                              <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                                :class="item.is_active ? 'bg-success-50 text-success-600 dark:bg-success-500/10 dark:text-success-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'"
+                                x-text="item.is_active ? 'Active' : 'Inactive'"></span>
+                            </td>
+                            <td class="py-3.5 px-4 text-right">
+                              <div class="inline-flex items-center gap-1">
+                                <button @click="openEditModal(item)" class="p-1.5 text-gray-400 hover:text-brand-500 dark:hover:text-brand-400"><i class="ph ph-pencil-simple text-lg"></i></button>
+                                <button @click="deleteConfirm(item.id)" class="p-1.5 text-gray-400 hover:text-error-500"><i class="ph ph-trash text-lg"></i></button>
+                              </div>
+                            </td>
+                          </tr>
+                        </template>
+                      </tbody>
+                    </table>
+                  </template>
+
+                  <!-- 8. Questions -->
+                  <template x-if="activeCategory === 'questions'">
+                    <table class="w-full text-left border-collapse text-sm">
+                      <thead>
+                        <tr class="border-b border-gray-100 dark:border-gray-800 text-gray-400 text-xs font-semibold uppercase">
+                          <th class="py-3 px-4">Question</th>
+                          <th class="py-3 px-4">Response Type</th>
+                          <th class="py-3 px-4">Category</th>
+                          <th class="py-3 px-4">Status</th>
+                          <th class="py-3 px-4 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <template x-for="item in filteredQuestions" :key="item.id">
+                          <tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/20 text-gray-700 dark:text-gray-300">
+                            <td class="py-3.5 px-4 font-bold text-gray-900 dark:text-white" x-text="item.name"></td>
+                            <td class="py-3.5 px-4 text-xs font-bold text-brand-600 dark:text-brand-400 uppercase" x-text="item.response_type"></td>
+                            <td class="py-3.5 px-4 text-gray-500" x-text="item.category_name"></td>
+                            <td class="py-3.5 px-4">
+                              <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                                :class="item.is_active ? 'bg-success-50 text-success-600 dark:bg-success-500/10 dark:text-success-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'"
+                                x-text="item.is_active ? 'Active' : 'Inactive'"></span>
+                            </td>
+                            <td class="py-3.5 px-4 text-right">
+                              <div class="inline-flex items-center gap-1">
+                                <button @click="openEditModal(item)" class="p-1.5 text-gray-400 hover:text-brand-500 dark:hover:text-brand-400"><i class="ph ph-pencil-simple text-lg"></i></button>
+                                <button @click="deleteConfirm(item.id)" class="p-1.5 text-gray-400 hover:text-error-500"><i class="ph ph-trash text-lg"></i></button>
+                              </div>
+                            </td>
+                          </tr>
+                        </template>
+                      </tbody>
+                    </table>
+                  </template>
+
+                  <!-- 9. Meta Configs -->
+                  <template x-if="activeCategory === 'meta-configs'">
+                    <table class="w-full text-left border-collapse text-sm">
+                      <thead>
+                        <tr class="border-b border-gray-100 dark:border-gray-800 text-gray-400 text-xs font-semibold uppercase">
+                          <th class="py-3 px-4">Configuration Key</th>
+                          <th class="py-3 px-4">Value</th>
+                          <th class="py-3 px-4">Type</th>
+                          <th class="py-3 px-4">Status</th>
+                          <th class="py-3 px-4 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <template x-for="item in filteredMetaConfigs" :key="item.id">
+                          <tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/20 text-gray-700 dark:text-gray-300">
+                            <td class="py-3.5 px-4 font-bold text-gray-900 dark:text-white" x-text="item.name"></td>
+                            <td class="py-3.5 px-4 text-xs font-mono text-brand-600 dark:text-brand-400 font-bold" x-text="item.value"></td>
+                            <td class="py-3.5 px-4 text-gray-500" x-text="item.config_type"></td>
+                            <td class="py-3.5 px-4">
+                              <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                                :class="item.is_active ? 'bg-success-50 text-success-600 dark:bg-success-500/10 dark:text-success-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'"
+                                x-text="item.is_active ? 'Active' : 'Inactive'"></span>
+                            </td>
+                            <td class="py-3.5 px-4 text-right">
+                              <div class="inline-flex items-center gap-1">
+                                <button @click="openEditModal(item)" class="p-1.5 text-gray-400 hover:text-brand-500 dark:hover:text-brand-400"><i class="ph ph-pencil-simple text-lg"></i></button>
+                                <button @click="deleteConfirm(item.id)" class="p-1.5 text-gray-400 hover:text-error-500"><i class="ph ph-trash text-lg"></i></button>
+                              </div>
+                            </td>
+                          </tr>
+                        </template>
+                      </tbody>
+                    </table>
+                  </template>
+
+                  <!-- Empty state catch-all -->
+                  <div x-show="isEmpty()" class="text-center py-16 text-gray-400">
+                    No configurations found. Click "Add New" to create one.
+                  </div>
+
+                  </div>
+
+                </div>
+              </template>
+
+            </div>
+
+          </div>
+
+          <!-- Adaptive Form Modal -->
+          <div
+            x-show="showModal"
+            class="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+            style="display: none;"
+          >
+            <div
+              @click.outside="showModal = false"
+              class="w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-gray-800 dark:bg-gray-900 flex flex-col gap-4 animate-scale-up"
+            >
+              <!-- Modal Header -->
+              <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800">
+                <h3 class="text-lg font-bold text-gray-800 dark:text-white">
+                  <span x-text="isEditMode ? 'Edit ' : 'Add New '"></span>
+                  <span x-text="getActiveCategoryLabel().slice(0, -1)"></span>
+                </h3>
+                <button @click="showModal = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors">
+                  <i class="ph ph-x text-xl"></i>
+                </button>
+              </div>
+
+              <!-- Adaptive Form Body -->
+              <form @submit.prevent="saveEntity()" class="flex flex-col gap-4 text-sm">
+                
+                <!-- Common Entity Name / Question / Key field -->
+                <div class="flex flex-col gap-1">
+                  <label class="text-xs font-bold text-gray-500 uppercase tracking-wide" x-text="getNameFieldLabel()"></label>
+                  <input
+                    type="text"
+                    required
+                    x-model="formData.name"
+                    placeholder="Enter value..."
+                    class="w-full px-3.5 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10"
+                  />
+                </div>
+
+                <!-- Category Specific Fields -->
+                
+                <!-- 1. Vehicle Types Code, Brand, Capacity -->
+                <template x-if="activeCategory === 'vehicle-types'">
+                  <div class="flex flex-col gap-4">
+                    <div class="flex flex-col gap-1">
+                      <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Code</label>
+                      <input type="text" required x-model="formData.code" class="w-full px-3.5 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10"/>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                      <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Brand</label>
+                      <input type="text" required x-model="formData.brand" class="w-full px-3.5 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10"/>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                      <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Power Capacity (kW)</label>
+                      <input type="text" required x-model="formData.capacity" class="w-full px-3.5 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10"/>
+                    </div>
+                  </div>
+                </template>
+
+                <!-- 2. Shifts times -->
+                <template x-if="activeCategory === 'shifts'">
+                  <div class="grid grid-cols-2 gap-4">
+                    <div class="flex flex-col gap-1">
+                      <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Start Time</label>
+                      <input type="time" required x-model="formData.start_time" class="w-full px-3.5 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10"/>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                      <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">End Time</label>
+                      <input type="time" required x-model="formData.end_time" class="w-full px-3.5 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10"/>
+                    </div>
+                  </div>
+                </template>
+
+                <!-- 3. Event Master Code & Severity -->
+                <template x-if="activeCategory === 'event-master'">
+                  <div class="flex flex-col gap-4">
+                    <div class="flex flex-col gap-1">
+                      <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Code</label>
+                      <input type="text" required x-model="formData.code" class="w-full px-3.5 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10"/>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                      <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Severity</label>
+                      <select x-model="formData.severity" class="w-full px-3.5 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 outline-none cursor-pointer">
+                        <option value="Critical">Critical</option>
+                        <option value="Warning">Warning</option>
+                        <option value="Info">Info</option>
+                      </select>
+                    </div>
+                  </div>
+                </template>
+
+                <!-- 4. Event Policies Notify Channels -->
+                <template x-if="activeCategory === 'event-policies'">
+                  <div class="flex flex-col gap-4">
+                    <div class="flex flex-col gap-1">
+                      <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Event Code</label>
+                      <input type="text" required x-model="formData.event_code" class="w-full px-3.5 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10"/>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                      <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Notify Channels</label>
+                      <input type="text" required x-model="formData.notify_via" placeholder="e.g. SMS & Push" class="w-full px-3.5 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10"/>
+                    </div>
+                  </div>
+                </template>
+
+                <!-- 5. Item Categories Code -->
+                <template x-if="activeCategory === 'item-categories'">
+                  <div class="flex flex-col gap-1">
+                    <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Code</label>
+                    <input type="text" required x-model="formData.code" class="w-full px-3.5 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10"/>
+                  </div>
+                </template>
+
+                <!-- 6. Checklist Categories Code & Description -->
+                <template x-if="activeCategory === 'checklist-categories'">
+                  <div class="flex flex-col gap-4">
+                    <div class="flex flex-col gap-1">
+                      <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Code</label>
+                      <input type="text" required x-model="formData.code" class="w-full px-3.5 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10"/>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                      <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Description</label>
+                      <textarea x-model="formData.description" class="w-full px-3.5 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10" rows="3"></textarea>
+                    </div>
+                  </div>
+                </template>
+
+                <!-- 7. Checklist Templates Category -->
+                <template x-if="activeCategory === 'checklist-templates'">
+                  <div class="flex flex-col gap-4">
+                    <div class="flex flex-col gap-1">
+                      <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Category</label>
+                      <select x-model="formData.category_name" class="w-full px-3.5 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 outline-none cursor-pointer">
+                        <template x-for="c in checklistCategories" :key="c.id">
+                          <option :value="c.name" x-text="c.name"></option>
+                        </template>
+                      </select>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                      <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Questions Count</label>
+                      <input type="number" required x-model="formData.questions_count" class="w-full px-3.5 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10"/>
+                    </div>
+                  </div>
+                </template>
+
+                <!-- 8. Questions Category & Answer Type -->
+                <template x-if="activeCategory === 'questions'">
+                  <div class="flex flex-col gap-4">
+                    <div class="flex flex-col gap-1">
+                      <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Response Type</label>
+                      <select x-model="formData.response_type" class="w-full px-3.5 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 outline-none cursor-pointer">
+                        <option value="Yes/No">Yes/No</option>
+                        <option value="Text">Text</option>
+                        <option value="Numeric">Numeric</option>
+                        <option value="Photo">Photo</option>
+                      </select>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                      <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Checklist Category</label>
+                      <select x-model="formData.category_name" class="w-full px-3.5 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 outline-none cursor-pointer">
+                        <template x-for="c in checklistCategories" :key="c.id">
+                          <option :value="c.name" x-text="c.name"></option>
+                        </template>
+                      </select>
+                    </div>
+                  </div>
+                </template>
+
+                <!-- 9. Meta Config Value & Config Type -->
+                <template x-if="activeCategory === 'meta-configs'">
+                  <div class="flex flex-col gap-4">
+                    <div class="flex flex-col gap-1">
+                      <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Value</label>
+                      <input type="text" required x-model="formData.value" class="w-full px-3.5 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10"/>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                      <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Config Type</label>
+                      <select x-model="formData.config_type" class="w-full px-3.5 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 outline-none cursor-pointer">
+                        <option value="System">System</option>
+                        <option value="Client">Client</option>
+                        <option value="Site">Site</option>
+                      </select>
+                    </div>
+                  </div>
+                </template>
+
+                <!-- Status Checkbox -->
+                <div class="flex items-center justify-between py-2.5 border-t border-b border-gray-100 dark:border-gray-800">
+                  <div class="flex flex-col">
+                    <span class="text-sm font-semibold text-gray-800 dark:text-white">Active Status</span>
+                    <span class="text-xs text-gray-400">Determine if this config is enabled in the system.</span>
+                  </div>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" x-model="formData.is_active" class="sr-only peer" />
+                    <div class="w-11 h-6 bg-gray-200 dark:bg-gray-800 rounded-full peer peer-focus:ring-2 peer-focus:ring-brand-500/25 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-500"></div>
+                  </label>
+                </div>
+
+                <!-- Buttons Footer -->
+                <div class="flex items-center justify-end gap-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+                  <button
+                    type="button"
+                    @click="showModal = false"
+                    class="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    class="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm flex items-center gap-1.5"
+                  >
+                    <i class="ph ph-floppy-disk text-lg"></i>
+                    Save Config
+                  </button>
+                </div>
+
+              </form>
+            </div>
+          </div>
+
+        </main>
+        <!-- ===== Main Content End ===== -->
+      </div>
+      <!-- ===== Content Area End ===== -->
+    </div>
+    <!-- ===== Page Wrapper End ===== -->
+
+    <!-- Alpine JS Master Tab Component Logic -->
+    <script>
+      function masterApp() {
+        return {
+          activeCategory: 'grid',
+          searchQuery: '',
+          loading: false,
+          showModal: false,
+          isEditMode: false,
+          successMessage: null,
+          errorMessage: null,
+          formData: {},
+
+          // Categories Sidebar Config
+          categories: [
+            { key: 'vehicle-types', label: 'Vehicle Types', icon: 'ph-bus', desc: 'Define fleet vehicle classes and dimensions.' },
+            { key: 'shifts', label: 'Shifts', icon: 'ph-calendar-blank', desc: 'Define operation schedule timing blocks.' },
+            { key: 'event-master', label: 'Event Master', icon: 'ph-bell-ringing', desc: 'Define fleet event alarm signals and levels.' },
+            { key: 'event-policies', label: 'Event Policies', icon: 'ph-shield-check', desc: 'Configure threshold notification policies.' },
+            { key: 'item-categories', label: 'Item Categories', icon: 'ph-wrench', desc: 'Group inventory checklist components.' },
+            { key: 'checklist-categories', label: 'Checklist Categories', icon: 'ph-clipboard-text', desc: 'Group inspection templates by scope.' },
+            { key: 'checklist-templates', label: 'Checklist Templates', icon: 'ph-note', desc: 'Configure standard checklists.' },
+            { key: 'questions', label: 'Questions', icon: 'ph-question', desc: 'Manage inspection question definitions.' },
+            { key: 'meta-configs', label: 'Meta Configs', icon: 'ph-gear', desc: 'Global system system key-value variables.' }
+          ],
+
+          // Mock Data Sets
+          vehicleTypes: [
+            { id: "vt-1", name: "EKA 9m Electric Bus", code: "EKA9M", brand: "EKA", capacity: "200kW", is_active: true },
+            { id: "vt-2", name: "IPLT DC Fast Truck", code: "IPLTF1", brand: "IPLT", capacity: "350kW", is_active: true },
+            { id: "vt-3", name: "EKA 12m Transit Bus", code: "EKA12M", brand: "EKA", capacity: "320kW", is_active: true }
+          ],
+          shifts: [
+            { id: "sh-1", name: "Morning Transit Shift", start_time: "06:00", end_time: "14:00", is_active: true },
+            { id: "sh-2", name: "Evening Transit Shift", start_time: "14:00", end_time: "22:00", is_active: true },
+            { id: "sh-3", name: "Night Maintenance Shift", start_time: "22:00", end_time: "06:00", is_active: true }
+          ],
+          eventMaster: [
+            { id: "ev-1", name: "Over Speeding Alert", code: "OVS", severity: "Warning", is_active: true },
+            { id: "ev-2", name: "Battery Critical Temperature", code: "BCT", severity: "Critical", is_active: true },
+            { id: "ev-3", name: "DC Charger Disconnection", code: "DCD", severity: "Critical", is_active: true },
+            { id: "ev-4", name: "Geofence Violation", code: "GFV", severity: "Info", is_active: true }
+          ],
+          eventPolicies: [
+            { id: "ep-1", name: "Critical EV Alarms", event_code: "BCT", notify_via: "SMS & Push", is_active: true },
+            { id: "ep-2", name: "Speed Limit Policy", event_code: "OVS", notify_via: "Dashboard", is_active: true }
+          ],
+          itemCategories: [
+            { id: "ic-1", name: "Battery Management System", code: "BMS", is_active: true },
+            { id: "ic-2", name: "High-Voltage Traction Motor", code: "HVTM", is_active: true },
+            { id: "ic-3", name: "DC Fast Charger Assembly", code: "DFCA", is_active: true }
+          ],
+          checklistCategories: [
+            { id: "cc-1", name: "Pre-Trip Inspection Checklist", code: "PTI", description: "Standard driver visual inspect check.", is_active: true },
+            { id: "cc-2", name: "Weekly Charging Station Audit", code: "WCA", description: "Weekly safety audit for DC plugs.", is_active: true },
+            { id: "cc-3", name: "EV Battery Health Diagnostics", code: "BHD", description: "BMS parameters health diagnostic check.", is_active: true }
+          ],
+          checklistTemplates: [
+            { id: "ct-1", name: "EKA EV Bus Pre-Start Checklist", category_name: "Pre-Trip Inspection Checklist", questions_count: 5, is_active: true },
+            { id: "ct-2", name: "HP 240kW DC Charger Weekly Audit", category_name: "Weekly Charging Station Audit", questions_count: 4, is_active: true }
+          ],
+          questions: [
+            { id: "q-1", name: "Is the EV battery SoC above 80%?", response_type: "Yes/No", category_name: "Pre-Trip Inspection Checklist", is_active: true },
+            { id: "q-2", name: "Are there any physical damages on the charging gun?", response_type: "Yes/No", category_name: "Weekly Charging Station Audit", is_active: true },
+            { id: "q-3", name: "Enter the current tyre pressure of front left tyre (PSI):", response_type: "Numeric", category_name: "Pre-Trip Inspection Checklist", is_active: true }
+          ],
+          metaConfigs: [
+            { id: "mc-1", name: "MAX_SPEED_LIMIT_KMH", value: "80", config_type: "System", is_active: true },
+            { id: "mc-2", name: "MIN_CHARGING_PERCENT", value: "15", config_type: "System", is_active: true },
+            { id: "mc-3", name: "ALLOW_OVERNIGHT_PARKING", value: "true", config_type: "Site", is_active: true }
+          ],
+
+          // Helper Labeling Getters
+          getActiveCategoryLabel() {
+            const cat = this.categories.find(c => c.key === this.activeCategory);
+            return cat ? cat.label : '';
+          },
+
+          getActiveCategoryDescription() {
+            const cat = this.categories.find(c => c.key === this.activeCategory);
+            return cat ? cat.desc : '';
+          },
+
+          getNameFieldLabel() {
+            const cat = this.activeCategory;
+            if (cat === 'questions') return 'Question Text';
+            if (cat === 'meta-configs') return 'Configuration Key';
+            return 'Name';
+          },
+
+          // Search filtering computed properties
+          get filteredVehicleTypes() {
+            return this.vehicleTypes.filter(i => i.name.toLowerCase().includes(this.searchQuery.toLowerCase()) || i.code.toLowerCase().includes(this.searchQuery.toLowerCase()));
+          },
+          get filteredShifts() {
+            return this.shifts.filter(i => i.name.toLowerCase().includes(this.searchQuery.toLowerCase()));
+          },
+          get filteredEventMaster() {
+            return this.eventMaster.filter(i => i.name.toLowerCase().includes(this.searchQuery.toLowerCase()) || i.code.toLowerCase().includes(this.searchQuery.toLowerCase()));
+          },
+          get filteredEventPolicies() {
+            return this.eventPolicies.filter(i => i.name.toLowerCase().includes(this.searchQuery.toLowerCase()) || i.event_code.toLowerCase().includes(this.searchQuery.toLowerCase()));
+          },
+          get filteredItemCategories() {
+            return this.itemCategories.filter(i => i.name.toLowerCase().includes(this.searchQuery.toLowerCase()) || i.code.toLowerCase().includes(this.searchQuery.toLowerCase()));
+          },
+          get filteredChecklistCategories() {
+            return this.checklistCategories.filter(i => i.name.toLowerCase().includes(this.searchQuery.toLowerCase()) || i.code.toLowerCase().includes(this.searchQuery.toLowerCase()));
+          },
+          get filteredChecklistTemplates() {
+            return this.checklistTemplates.filter(i => i.name.toLowerCase().includes(this.searchQuery.toLowerCase()));
+          },
+          get filteredQuestions() {
+            return this.questions.filter(i => i.name.toLowerCase().includes(this.searchQuery.toLowerCase()));
+          },
+          get filteredMetaConfigs() {
+            return this.metaConfigs.filter(i => i.name.toLowerCase().includes(this.searchQuery.toLowerCase()));
+          },
+
+          isEmpty() {
+            const tab = this.activeCategory;
+            if (tab === 'vehicle-types') return this.filteredVehicleTypes.length === 0;
+            if (tab === 'shifts') return this.filteredShifts.length === 0;
+            if (tab === 'event-master') return this.filteredEventMaster.length === 0;
+            if (tab === 'event-policies') return this.filteredEventPolicies.length === 0;
+            if (tab === 'item-categories') return this.filteredItemCategories.length === 0;
+            if (tab === 'checklist-categories') return this.filteredChecklistCategories.length === 0;
+            if (tab === 'checklist-templates') return this.filteredChecklistTemplates.length === 0;
+            if (tab === 'questions') return this.filteredQuestions.length === 0;
+            if (tab === 'meta-configs') return this.filteredMetaConfigs.length === 0;
+            return true;
+          },
+
+          setCategory(key) {
+            this.activeCategory = key;
+            this.searchQuery = '';
+            if (key === 'meta-configs') {
+              this.fetchMetaConfigs();
+            }
+          },
+
+          backToGrid() {
+            this.activeCategory = 'grid';
+            this.searchQuery = '';
+          },
+
+          initApp() {
+            // Watch dark mode and styling changes
+          },
+
+          getToken() {
+            const auth = sessionStorage.getItem("AuthToken");
+            return auth ? JSON.parse(auth).token : null;
+          },
+
+          // Fetch API config call
+          async fetchMetaConfigs() {
+            const token = this.getToken();
+            if (!token) return;
+            this.loading = true;
+            try {
+              const res = await fetch("https://dev-siteops-platform.transvolt.org/api/v1/master/meta-config", {
+                headers: { "Authorization": `Bearer ${token}` }
+              });
+              if (res.ok) {
+                const data = await res.json();
+                if (data && data.data) {
+                  this.metaConfigs = data.data.map(item => ({
+                    id: item.id || ('meta-' + Math.random()),
+                    name: item.config_key || item.name,
+                    value: item.value,
+                    config_type: item.config_type || 'System',
+                    is_active: item.is_active !== undefined ? item.is_active : true
+                  }));
+                }
+              }
+            } catch (err) {
+              console.error("Failed fetching meta configs:", err);
+            } finally {
+              this.loading = false;
+            }
+          },
+
+          showNotification(msg, type = 'success') {
+            if (type === 'success') {
+              this.successMessage = msg;
+              setTimeout(() => this.successMessage = null, 3000);
+            } else {
+              this.errorMessage = msg;
+              setTimeout(() => this.errorMessage = null, 3000);
+            }
+          },
+
+          openAddModal() {
+            this.isEditMode = false;
+            this.formData = {
+              id: null,
+              name: '',
+              code: '',
+              brand: '',
+              capacity: '',
+              start_time: '08:00',
+              end_time: '17:00',
+              severity: 'Warning',
+              event_code: '',
+              notify_via: 'Push Notification',
+              description: '',
+              category_name: this.checklistCategories.length ? this.checklistCategories[0].name : '',
+              questions_count: 0,
+              response_type: 'Yes/No',
+              value: '',
+              config_type: 'System',
+              is_active: true
+            };
+            this.showModal = true;
+          },
+
+          openEditModal(item) {
+            this.isEditMode = true;
+            this.formData = { ...item };
+            this.showModal = true;
+          },
+
+          async saveEntity() {
+            this.loading = true;
+            this.showModal = false;
+            const tab = this.activeCategory;
+            const token = this.getToken();
+
+            try {
+              let success = false;
+              // Attempt API calls for meta-configs
+              if (tab === 'meta-configs' && token) {
+                const method = this.isEditMode ? 'PATCH' : 'POST';
+                const url = this.isEditMode ? `https://dev-siteops-platform.transvolt.org/api/v1/master/meta-config/${this.formData.id}` : `https://dev-siteops-platform.transvolt.org/api/v1/master/meta-config`;
+                const body = { config_key: this.formData.name, value: this.formData.value, config_type: this.formData.config_type, is_active: this.formData.is_active };
+
+                const res = await fetch(url, {
+                  method: method,
+                  headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Content-Type": "application/json"
+                  },
+                  body: JSON.stringify(body)
+                });
+                if (res.ok) {
+                  success = true;
+                }
+              }
+
+              // Fallback / Local simulation updates
+              const newId = this.formData.id || ('mock-' + Math.random().toString(36).substr(2, 9));
+              const entity = { ...this.formData, id: newId };
+
+              if (tab === 'vehicle-types') {
+                if (this.isEditMode) {
+                  this.vehicleTypes = this.vehicleTypes.map(i => i.id === newId ? entity : i);
+                } else {
+                  this.vehicleTypes.push(entity);
+                }
+              } else if (tab === 'shifts') {
+                if (this.isEditMode) {
+                  this.shifts = this.shifts.map(i => i.id === newId ? entity : i);
+                } else {
+                  this.shifts.push(entity);
+                }
+              } else if (tab === 'event-master') {
+                if (this.isEditMode) {
+                  this.eventMaster = this.eventMaster.map(i => i.id === newId ? entity : i);
+                } else {
+                  this.eventMaster.push(entity);
+                }
+              } else if (tab === 'event-policies') {
+                if (this.isEditMode) {
+                  this.eventPolicies = this.eventPolicies.map(i => i.id === newId ? entity : i);
+                } else {
+                  this.eventPolicies.push(entity);
+                }
+              } else if (tab === 'item-categories') {
+                if (this.isEditMode) {
+                  this.itemCategories = this.itemCategories.map(i => i.id === newId ? entity : i);
+                } else {
+                  this.itemCategories.push(entity);
+                }
+              } else if (tab === 'checklist-categories') {
+                if (this.isEditMode) {
+                  this.checklistCategories = this.checklistCategories.map(i => i.id === newId ? entity : i);
+                } else {
+                  this.checklistCategories.push(entity);
+                }
+              } else if (tab === 'checklist-templates') {
+                if (this.isEditMode) {
+                  this.checklistTemplates = this.checklistTemplates.map(i => i.id === newId ? entity : i);
+                } else {
+                  this.checklistTemplates.push(entity);
+                }
+              } else if (tab === 'questions') {
+                if (this.isEditMode) {
+                  this.questions = this.questions.map(i => i.id === newId ? entity : i);
+                } else {
+                  this.questions.push(entity);
+                }
+              } else if (tab === 'meta-configs') {
+                if (!success) {
+                  if (this.isEditMode) {
+                    this.metaConfigs = this.metaConfigs.map(i => i.id === newId ? entity : i);
+                  } else {
+                    this.metaConfigs.push(entity);
+                  }
+                } else {
+                  // Reload from API
+                  this.fetchMetaConfigs();
+                }
+              }
+
+              this.showNotification(`Successfully saved ${this.formData.name}!`);
+
+            } catch (err) {
+              console.error("Error saving master entity:", err);
+              this.showNotification("Failed to save configuration.", "error");
+            } finally {
+              this.loading = false;
+            }
+          },
+
+          deleteConfirm(id) {
+            if (confirm("Are you sure you want to delete this configuration?")) {
+              this.deleteEntity(id);
+            }
+          },
+
+          async deleteEntity(id) {
+            this.loading = true;
+            const tab = this.activeCategory;
+            const token = this.getToken();
+
+            try {
+              let success = false;
+              if (tab === 'meta-configs' && token) {
+                const res = await fetch(`https://dev-siteops-platform.transvolt.org/api/v1/master/meta-config/${id}`, {
+                  method: 'DELETE',
+                  headers: { "Authorization": `Bearer ${token}` }
+                });
+                if (res.ok) {
+                  success = true;
+                }
+              }
+
+              if (tab === 'vehicle-types') {
+                this.vehicleTypes = this.vehicleTypes.filter(i => i.id !== id);
+              } else if (tab === 'shifts') {
+                this.shifts = this.shifts.filter(i => i.id !== id);
+              } else if (tab === 'event-master') {
+                this.eventMaster = this.eventMaster.filter(i => i.id !== id);
+              } else if (tab === 'event-policies') {
+                this.eventPolicies = this.eventPolicies.filter(i => i.id !== id);
+              } else if (tab === 'item-categories') {
+                this.itemCategories = this.itemCategories.filter(i => i.id !== id);
+              } else if (tab === 'checklist-categories') {
+                this.checklistCategories = this.checklistCategories.filter(i => i.id !== id);
+              } else if (tab === 'checklist-templates') {
+                this.checklistTemplates = this.checklistTemplates.filter(i => i.id !== id);
+              } else if (tab === 'questions') {
+                this.questions = this.questions.filter(i => i.id !== id);
+              } else if (tab === 'meta-configs') {
+                if (!success) {
+                  this.metaConfigs = this.metaConfigs.filter(i => i.id !== id);
+                } else {
+                  this.fetchMetaConfigs();
+                }
+              }
+
+              this.showNotification("Successfully deleted configuration!");
+
+            } catch (err) {
+              console.error("Error deleting master entity:", err);
+              this.showNotification("Failed to delete configuration.", "error");
+            } finally {
+              this.loading = false;
+            }
+          }
+
+        };
+      }
+    </script>
+  </body>
+</html>

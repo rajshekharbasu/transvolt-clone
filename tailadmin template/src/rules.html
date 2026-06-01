@@ -1,0 +1,717 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
+    />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Rules Configuration | TransVolt</title>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  </head>
+  <body
+    x-data="{ page: 'rules', 'loaded': true, 'darkMode': false, 'stickyMenu': false, 'sidebarToggle': false, 'scrollTop': false }"
+    x-init="
+         darkMode = JSON.parse(localStorage.getItem('darkMode'));
+         $watch('darkMode', value => localStorage.setItem('darkMode', JSON.stringify(value)))"
+    :class="{'dark bg-gray-900': darkMode === true}"
+  >
+    <!-- ===== Preloader Start ===== -->
+    <include src="./partials/preloader.html"></include>
+    <!-- ===== Preloader End ===== -->
+
+    <!-- ===== Page Wrapper Start ===== -->
+    <div class="flex h-screen overflow-hidden">
+      <!-- ===== Sidebar Start ===== -->
+      <include src="./partials/sidebar.html"></include>
+      <!-- ===== Sidebar End ===== -->
+
+      <!-- ===== Content Area Start ===== -->
+      <div
+        class="relative flex flex-col flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900"
+      >
+        <!-- Small Device Overlay Start -->
+        <include src="./partials/overlay.html" />
+        <!-- Small Device Overlay End -->
+
+        <!-- ===== Header Start ===== -->
+        <include src="./partials/header.html" />
+        <!-- ===== Header End ===== -->
+
+        <!-- ===== Main Content Start ===== -->
+        <main x-data="rulesApp()" x-init="initApp()">
+          <div class="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">
+            
+            <!-- Breadcrumbs / Title Section -->
+            <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div class="flex items-center gap-3">
+                <button
+                  x-show="activeCategory !== 'grid'"
+                  style="display: none;"
+                  @click="backToGrid()"
+                  class="flex h-10 w-10 items-center justify-center rounded-xl bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 shadow-sm"
+                >
+                  <i class="ph ph-arrow-left text-xl"></i>
+                </button>
+                <div>
+                  <h2 class="text-title-md2 font-bold text-gray-800 dark:text-white/90" x-text="activeCategory === 'grid' ? 'Rules Configuration' : getActiveCategoryLabel()">Rules Configuration</h2>
+                  <p class="text-sm text-gray-500 dark:text-gray-400 mt-1" x-text="activeCategory === 'grid' ? 'Configure rules, alerts, and notifications for the fleet.' : getActiveCategoryDescription()"></p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Toast Notifications -->
+            <div class="fixed top-5 right-5 z-[9999] flex flex-col gap-2">
+              <template x-if="successMessage">
+                <div class="flex items-center gap-3 bg-success-600 text-white px-4 py-3 rounded-xl shadow-lg animate-fade-in-right">
+                  <i class="ph ph-check-circle text-lg"></i>
+                  <span class="text-sm font-semibold" x-text="successMessage"></span>
+                </div>
+              </template>
+              <template x-if="errorMessage">
+                <div class="flex items-center gap-3 bg-error-600 text-white px-4 py-3 rounded-xl shadow-lg animate-fade-in-right">
+                  <i class="ph ph-warning-circle text-lg"></i>
+                  <span class="text-sm font-semibold" x-text="errorMessage"></span>
+                </div>
+              </template>
+            </div>
+
+            <!-- Rules Console Layout -->
+            <div>
+              
+              <!-- 1. Grid of Categories (Visible when activeCategory is 'grid') -->
+              <template x-if="activeCategory === 'grid'">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 animate-scale-up">
+                  <template x-for="cat in categories" :key="cat.key">
+                    <button
+                      type="button"
+                      @click="setCategory(cat.key)"
+                      class="group text-left cursor-pointer rounded-2xl border border-gray-200 bg-white p-6 shadow-sm hover:shadow-md transition-all duration-300 dark:border-gray-800 dark:bg-white/[0.03] hover:-translate-y-1 hover:border-brand-500/30 flex flex-col gap-4 w-full"
+                    >
+                      <div class="flex items-center justify-between w-full">
+                        <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-brand-500/10 text-brand-500 dark:bg-brand-500/20 transition-colors group-hover:bg-brand-500 group-hover:text-white">
+                          <i class="ph text-2xl" :class="cat.icon"></i>
+                        </div>
+                        <span class="text-gray-400 group-hover:text-brand-500 transition-colors">
+                          <i class="ph ph-arrow-right text-lg"></i>
+                        </span>
+                      </div>
+                      <div>
+                        <h4 class="text-lg font-bold text-gray-900 dark:text-white" x-text="cat.label"></h4>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1" x-text="cat.desc"></p>
+                      </div>
+                    </button>
+                  </template>
+                </div>
+              </template>
+
+              <!-- 2. Workspace View (Visible when category is selected) -->
+              <template x-if="activeCategory !== 'grid'">
+                <div class="space-y-6 animate-fade-in">
+                  
+                  <!-- Control Row: Search & Add -->
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-200 dark:bg-white/[0.03] dark:border-gray-800">
+                    <div class="relative flex-1 max-w-md">
+                      <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                        <i class="ph ph-magnifying-glass text-lg"></i>
+                      </span>
+                      <input
+                        type="text"
+                        x-model="searchQuery"
+                        placeholder="Search rules..."
+                        class="w-full pl-11 pr-4 py-2.5 rounded-xl border border-gray-200 outline-none focus:border-brand-500 transition-colors bg-gray-50 focus:bg-white dark:bg-gray-800 dark:border-gray-700 dark:focus:bg-gray-900 text-gray-800 dark:text-white/90 text-sm"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      @click="openAddModal()"
+                      class="flex items-center justify-center gap-2 bg-brand-500 text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-brand-600 transition-colors shadow-sm text-sm"
+                    >
+                      <i class="ph ph-plus-circle text-lg"></i>
+                      <span>Add Rule</span>
+                    </button>
+                  </div>
+
+                  <!-- Empty State -->
+                  <div x-show="isEmpty()" class="flex flex-col items-center justify-center bg-white border border-gray-200 rounded-2xl p-12 text-center dark:bg-white/[0.03] dark:border-gray-800">
+                    <div class="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 mb-4 dark:bg-gray-800">
+                      <i class="ph ph-folder-open text-3xl"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">No rules found</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-sm">No rules match your search parameters. Click "Add Rule" to define a new trigger.</p>
+                  </div>
+
+                  <!-- Data Table (Speeding Rules) -->
+                  <div x-show="activeCategory === 'speeding' && !isEmpty()" class="bg-white border border-gray-200 rounded-2xl overflow-hidden dark:bg-white/[0.03] dark:border-gray-800">
+                    <div class="overflow-x-auto">
+                      <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                          <tr class="bg-gray-50 border-b border-gray-200 dark:bg-white/[0.02] dark:border-gray-800 text-gray-500 dark:text-gray-400 font-semibold">
+                            <th class="px-6 py-4">Rule Name</th>
+                            <th class="px-6 py-4">Speed Limit (km/h)</th>
+                            <th class="px-6 py-4">Duration Threshold</th>
+                            <th class="px-6 py-4">Severity</th>
+                            <th class="px-6 py-4">Status</th>
+                            <th class="px-6 py-4 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <template x-for="item in filteredSpeedingRules" :key="item.id">
+                            <tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-colors">
+                              <td class="px-6 py-4 font-semibold text-gray-900 dark:text-white" x-text="item.name"></td>
+                              <td class="px-6 py-4 text-gray-700 dark:text-gray-300" x-text="item.limit + ' km/h'"></td>
+                              <td class="px-6 py-4 text-gray-700 dark:text-gray-300" x-text="item.duration + ' seconds'"></td>
+                              <td class="px-6 py-4">
+                                <span :class="{
+                                  'bg-error-50 text-error-700 border-error-100 dark:bg-error-500/10 dark:text-error-400': item.severity === 'Critical',
+                                  'bg-warning-50 text-warning-700 border-warning-100 dark:bg-warning-500/10 dark:text-warning-400': item.severity === 'Warning',
+                                  'bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-500/10 dark:text-blue-400': item.severity === 'Info'
+                                }" class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold border" x-text="item.severity"></span>
+                              </td>
+                              <td class="px-6 py-4">
+                                <button @click="toggleActiveState(item)" class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none" :class="item.is_active ? 'bg-success-500' : 'bg-gray-200 dark:bg-gray-700'">
+                                  <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out" :class="item.is_active ? 'translate-x-5' : 'translate-x-0'"></span>
+                                </button>
+                              </td>
+                              <td class="px-6 py-4 text-right">
+                                <div class="flex items-center justify-end gap-2">
+                                  <button @click="openEditModal(item)" class="p-1.5 text-gray-500 hover:text-brand-500 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors">
+                                    <i class="ph ph-pencil-simple text-lg"></i>
+                                  </button>
+                                  <button @click="deleteConfirm(item.id)" class="p-1.5 text-gray-500 hover:text-error-500 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors">
+                                    <i class="ph ph-trash text-lg"></i>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          </template>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <!-- Data Table (Idling Rules) -->
+                  <div x-show="activeCategory === 'idling' && !isEmpty()" class="bg-white border border-gray-200 rounded-2xl overflow-hidden dark:bg-white/[0.03] dark:border-gray-800">
+                    <div class="overflow-x-auto">
+                      <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                          <tr class="bg-gray-50 border-b border-gray-200 dark:bg-white/[0.02] dark:border-gray-800 text-gray-500 dark:text-gray-400 font-semibold">
+                            <th class="px-6 py-4">Rule Name</th>
+                            <th class="px-6 py-4">Idling Timeout (mins)</th>
+                            <th class="px-6 py-4">Notification Channel</th>
+                            <th class="px-6 py-4">Status</th>
+                            <th class="px-6 py-4 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <template x-for="item in filteredIdlingRules" :key="item.id">
+                            <tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-colors">
+                              <td class="px-6 py-4 font-semibold text-gray-900 dark:text-white" x-text="item.name"></td>
+                              <td class="px-6 py-4 text-gray-700 dark:text-gray-300" x-text="item.limit + ' minutes'"></td>
+                              <td class="px-6 py-4 text-gray-700 dark:text-gray-300" x-text="item.notify_via"></td>
+                              <td class="px-6 py-4">
+                                <button @click="toggleActiveState(item)" class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none" :class="item.is_active ? 'bg-success-500' : 'bg-gray-200 dark:bg-gray-700'">
+                                  <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out" :class="item.is_active ? 'translate-x-5' : 'translate-x-0'"></span>
+                                </button>
+                              </td>
+                              <td class="px-6 py-4 text-right">
+                                <div class="flex items-center justify-end gap-2">
+                                  <button @click="openEditModal(item)" class="p-1.5 text-gray-500 hover:text-brand-500 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors">
+                                    <i class="ph ph-pencil-simple text-lg"></i>
+                                  </button>
+                                  <button @click="deleteConfirm(item.id)" class="p-1.5 text-gray-500 hover:text-error-500 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors">
+                                    <i class="ph ph-trash text-lg"></i>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          </template>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <!-- Data Table (Battery Rules) -->
+                  <div x-show="activeCategory === 'battery' && !isEmpty()" class="bg-white border border-gray-200 rounded-2xl overflow-hidden dark:bg-white/[0.03] dark:border-gray-800">
+                    <div class="overflow-x-auto">
+                      <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                          <tr class="bg-gray-50 border-b border-gray-200 dark:bg-white/[0.02] dark:border-gray-800 text-gray-500 dark:text-gray-400 font-semibold">
+                            <th class="px-6 py-4">Rule Name</th>
+                            <th class="px-6 py-4">SoC Threshold (%)</th>
+                            <th class="px-6 py-4">Temp Limit (°C)</th>
+                            <th class="px-6 py-4">Severity</th>
+                            <th class="px-6 py-4">Status</th>
+                            <th class="px-6 py-4 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <template x-for="item in filteredBatteryRules" :key="item.id">
+                            <tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-colors">
+                              <td class="px-6 py-4 font-semibold text-gray-900 dark:text-white" x-text="item.name"></td>
+                              <td class="px-6 py-4 text-gray-700 dark:text-gray-300" x-text="item.soc_limit + '%'"></td>
+                              <td class="px-6 py-4 text-gray-700 dark:text-gray-300" x-text="item.temp_limit + ' °C'"></td>
+                              <td class="px-6 py-4">
+                                <span :class="{
+                                  'bg-error-50 text-error-700 border-error-100 dark:bg-error-500/10 dark:text-error-400': item.severity === 'Critical',
+                                  'bg-warning-50 text-warning-700 border-warning-100 dark:bg-warning-500/10 dark:text-warning-400': item.severity === 'Warning',
+                                  'bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-500/10 dark:text-blue-400': item.severity === 'Info'
+                                }" class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold border" x-text="item.severity"></span>
+                              </td>
+                              <td class="px-6 py-4">
+                                <button @click="toggleActiveState(item)" class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none" :class="item.is_active ? 'bg-success-500' : 'bg-gray-200 dark:bg-gray-700'">
+                                  <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out" :class="item.is_active ? 'translate-x-5' : 'translate-x-0'"></span>
+                                </button>
+                              </td>
+                              <td class="px-6 py-4 text-right">
+                                <div class="flex items-center justify-end gap-2">
+                                  <button @click="openEditModal(item)" class="p-1.5 text-gray-500 hover:text-brand-500 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors">
+                                    <i class="ph ph-pencil-simple text-lg"></i>
+                                  </button>
+                                  <button @click="deleteConfirm(item.id)" class="p-1.5 text-gray-500 hover:text-error-500 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors">
+                                    <i class="ph ph-trash text-lg"></i>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          </template>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <!-- Data Table (Geofence Rules) -->
+                  <div x-show="activeCategory === 'geofence' && !isEmpty()" class="bg-white border border-gray-200 rounded-2xl overflow-hidden dark:bg-white/[0.03] dark:border-gray-800">
+                    <div class="overflow-x-auto">
+                      <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                          <tr class="bg-gray-50 border-b border-gray-200 dark:bg-white/[0.02] dark:border-gray-800 text-gray-500 dark:text-gray-400 font-semibold">
+                            <th class="px-6 py-4">Rule Name</th>
+                            <th class="px-6 py-4">Target Geofence</th>
+                            <th class="px-6 py-4">Alert Trigger</th>
+                            <th class="px-6 py-4">Status</th>
+                            <th class="px-6 py-4 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <template x-for="item in filteredGeofenceRules" :key="item.id">
+                            <tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-colors">
+                              <td class="px-6 py-4 font-semibold text-gray-900 dark:text-white" x-text="item.name"></td>
+                              <td class="px-6 py-4 text-gray-700 dark:text-gray-300" x-text="item.geofence_name"></td>
+                              <td class="px-6 py-4 text-gray-700 dark:text-gray-300" x-text="item.trigger_type"></td>
+                              <td class="px-6 py-4">
+                                <button @click="toggleActiveState(item)" class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none" :class="item.is_active ? 'bg-success-500' : 'bg-gray-200 dark:bg-gray-700'">
+                                  <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out" :class="item.is_active ? 'translate-x-5' : 'translate-x-0'"></span>
+                                </button>
+                              </td>
+                              <td class="px-6 py-4 text-right">
+                                <div class="flex items-center justify-end gap-2">
+                                  <button @click="openEditModal(item)" class="p-1.5 text-gray-500 hover:text-brand-500 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors">
+                                    <i class="ph ph-pencil-simple text-lg"></i>
+                                  </button>
+                                  <button @click="deleteConfirm(item.id)" class="p-1.5 text-gray-500 hover:text-error-500 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors">
+                                    <i class="ph ph-trash text-lg"></i>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          </template>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                </div>
+              </template>
+
+            </div>
+
+          </div>
+
+          <!-- CRUD Modal Form Overlay -->
+          <div
+            x-show="showModal"
+            class="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto"
+            style="display: none;"
+            x-transition
+          >
+            <div
+              @click.outside="showModal = false"
+              class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900 border border-gray-150 dark:border-gray-800 flex flex-col max-h-[90vh] my-8"
+            >
+              
+              <!-- Modal Header -->
+              <div class="flex items-center justify-between pb-4 border-b border-gray-200 dark:border-gray-800">
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white" x-text="isEditMode ? 'Edit Rule Settings' : 'Add New Fleet Rule'"></h3>
+                <button @click="showModal = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                  <i class="ph ph-x text-2xl"></i>
+                </button>
+              </div>
+
+              <!-- Form Body -->
+              <div class="flex-1 overflow-y-auto py-6 space-y-4 pr-1">
+                
+                <!-- Rule Name (Common) -->
+                <div class="flex flex-col gap-1.5">
+                  <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">Rule Name</label>
+                  <input
+                    type="text"
+                    x-model="formData.name"
+                    placeholder="Enter descriptive rule name..."
+                    class="w-full px-4 py-2.5 rounded-xl border border-gray-200 outline-none focus:border-brand-500 bg-gray-50 focus:bg-white dark:bg-gray-800 dark:border-gray-700 text-gray-800 dark:text-white/90 text-sm"
+                  />
+                </div>
+
+                <!-- Speeding Custom Fields -->
+                <template x-if="activeCategory === 'speeding'">
+                  <div class="space-y-4">
+                    <div class="flex flex-col gap-1.5">
+                      <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">Speed Limit (km/h)</label>
+                      <input
+                        type="number"
+                        x-model.number="formData.limit"
+                        placeholder="e.g. 80"
+                        class="w-full px-4 py-2.5 rounded-xl border border-gray-200 outline-none focus:border-brand-500 bg-gray-50 focus:bg-white dark:bg-gray-800 dark:border-gray-700 text-gray-800 dark:text-white/90 text-sm"
+                      />
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                      <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">Duration Threshold (seconds)</label>
+                      <input
+                        type="number"
+                        x-model.number="formData.duration"
+                        placeholder="e.g. 15"
+                        class="w-full px-4 py-2.5 rounded-xl border border-gray-200 outline-none focus:border-brand-500 bg-gray-50 focus:bg-white dark:bg-gray-800 dark:border-gray-700 text-gray-800 dark:text-white/90 text-sm"
+                      />
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                      <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">Severity Level</label>
+                      <select
+                        x-model="formData.severity"
+                        class="w-full px-4 py-2.5 rounded-xl border border-gray-200 outline-none focus:border-brand-500 bg-gray-50 focus:bg-white dark:bg-gray-800 dark:border-gray-700 text-gray-800 dark:text-white/90 text-sm"
+                      >
+                        <option value="Info">Info</option>
+                        <option value="Warning">Warning</option>
+                        <option value="Critical">Critical</option>
+                      </select>
+                    </div>
+                  </div>
+                </template>
+
+                <!-- Idling Custom Fields -->
+                <template x-if="activeCategory === 'idling'">
+                  <div class="space-y-4">
+                    <div class="flex flex-col gap-1.5">
+                      <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">Max Idling Time (minutes)</label>
+                      <input
+                        type="number"
+                        x-model.number="formData.limit"
+                        placeholder="e.g. 10"
+                        class="w-full px-4 py-2.5 rounded-xl border border-gray-200 outline-none focus:border-brand-500 bg-gray-50 focus:bg-white dark:bg-gray-800 dark:border-gray-700 text-gray-800 dark:text-white/90 text-sm"
+                      />
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                      <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">Notify Via</label>
+                      <select
+                        x-model="formData.notify_via"
+                        class="w-full px-4 py-2.5 rounded-xl border border-gray-200 outline-none focus:border-brand-500 bg-gray-50 focus:bg-white dark:bg-gray-800 dark:border-gray-700 text-gray-800 dark:text-white/90 text-sm"
+                      >
+                        <option value="Dashboard Alert">Dashboard Alert</option>
+                        <option value="SMS & Push">SMS & Push</option>
+                        <option value="Email Alert">Email Alert</option>
+                      </select>
+                    </div>
+                  </div>
+                </template>
+
+                <!-- Battery Custom Fields -->
+                <template x-if="activeCategory === 'battery'">
+                  <div class="space-y-4">
+                    <div class="flex flex-col gap-1.5">
+                      <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">SoC Warning Limit (%)</label>
+                      <input
+                        type="number"
+                        x-model.number="formData.soc_limit"
+                        placeholder="e.g. 20"
+                        class="w-full px-4 py-2.5 rounded-xl border border-gray-200 outline-none focus:border-brand-500 bg-gray-50 focus:bg-white dark:bg-gray-800 dark:border-gray-700 text-gray-800 dark:text-white/90 text-sm"
+                      />
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                      <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">Max Temp Limit (°C)</label>
+                      <input
+                        type="number"
+                        x-model.number="formData.temp_limit"
+                        placeholder="e.g. 55"
+                        class="w-full px-4 py-2.5 rounded-xl border border-gray-200 outline-none focus:border-brand-500 bg-gray-50 focus:bg-white dark:bg-gray-800 dark:border-gray-700 text-gray-800 dark:text-white/90 text-sm"
+                      />
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                      <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">Severity Level</label>
+                      <select
+                        x-model="formData.severity"
+                        class="w-full px-4 py-2.5 rounded-xl border border-gray-200 outline-none focus:border-brand-500 bg-gray-50 focus:bg-white dark:bg-gray-800 dark:border-gray-700 text-gray-800 dark:text-white/90 text-sm"
+                      >
+                        <option value="Info">Info</option>
+                        <option value="Warning">Warning</option>
+                        <option value="Critical">Critical</option>
+                      </select>
+                    </div>
+                  </div>
+                </template>
+
+                <!-- Geofence Custom Fields -->
+                <template x-if="activeCategory === 'geofence'">
+                  <div class="space-y-4">
+                    <div class="flex flex-col gap-1.5">
+                      <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">Target Geofence Zone</label>
+                      <input
+                        type="text"
+                        x-model="formData.geofence_name"
+                        placeholder="e.g. Nagpur Depot 1"
+                        class="w-full px-4 py-2.5 rounded-xl border border-gray-200 outline-none focus:border-brand-500 bg-gray-50 focus:bg-white dark:bg-gray-800 dark:border-gray-700 text-gray-800 dark:text-white/90 text-sm"
+                      />
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                      <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">Alert Trigger</label>
+                      <select
+                        x-model="formData.trigger_type"
+                        class="w-full px-4 py-2.5 rounded-xl border border-gray-200 outline-none focus:border-brand-500 bg-gray-50 focus:bg-white dark:bg-gray-800 dark:border-gray-700 text-gray-800 dark:text-white/90 text-sm"
+                      >
+                        <option value="Enter & Exit">Enter & Exit</option>
+                        <option value="Enter Only">Enter Only</option>
+                        <option value="Exit Only">Exit Only</option>
+                      </select>
+                    </div>
+                  </div>
+                </template>
+
+                <!-- Toggle Active State -->
+                <div class="flex items-center justify-between pt-2">
+                  <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Enable Rule State</span>
+                  <button @click="formData.is_active = !formData.is_active" class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none" :class="formData.is_active ? 'bg-success-500' : 'bg-gray-200 dark:bg-gray-700'">
+                    <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out" :class="formData.is_active ? 'translate-x-5' : 'translate-x-0'"></span>
+                  </button>
+                </div>
+
+              </div>
+
+              <!-- Footer Buttons -->
+              <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-800">
+                <button
+                  type="button"
+                  @click="showModal = false"
+                  class="px-5 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800 font-semibold text-sm transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  @click="saveEntity()"
+                  class="px-5 py-2.5 rounded-xl bg-brand-500 text-white font-semibold text-sm hover:bg-brand-600 transition-colors shadow-sm"
+                >
+                  Save Changes
+                </button>
+              </div>
+
+            </div>
+          </div>
+
+        </main>
+        <!-- ===== Main Content End ===== -->
+      </div>
+      <!-- ===== Content Area End ===== -->
+    </div>
+    <!-- ===== Page Wrapper End ===== -->
+
+    <!-- Alpine Rules App Controller -->
+    <script>
+      function rulesApp() {
+        return {
+          activeCategory: 'grid',
+          searchQuery: '',
+          showModal: false,
+          isEditMode: false,
+          successMessage: null,
+          errorMessage: null,
+          formData: {},
+
+          categories: [
+            { key: 'speeding', label: 'Speeding Rules', icon: 'ph-gauge', desc: 'Configure vehicle speeding limits, duration thresholds, and notification levels.' },
+            { key: 'idling', label: 'Idling Rules', icon: 'ph-timer', desc: 'Configure maximum allowable idle duration thresholds and trigger alerts.' },
+            { key: 'battery', label: 'Battery Rules', icon: 'ph-battery-warning', desc: 'Configure critical state-of-charge (SoC) parameters and temperature limits.' },
+            { key: 'geofence', label: 'Geofence Rules', icon: 'ph-map-pin-line', desc: 'Set up boundary boundaries and alert triggers when entering or exiting zones.' }
+          ],
+
+          // Mock Data Sets
+          speedingRules: [
+            { id: 'sr-1', name: 'Expressway Limit', limit: 80, duration: 15, severity: 'Critical', is_active: true },
+            { id: 'sr-2', name: 'Depot Safe Zone Limit', limit: 20, duration: 5, severity: 'Warning', is_active: true },
+            { id: 'sr-3', name: 'Standard Urban Route Limit', limit: 50, duration: 30, severity: 'Info', is_active: false }
+          ],
+          idlingRules: [
+            { id: 'ir-1', name: 'Nagpur Terminal Timeout', limit: 10, notify_via: 'SMS & Push', is_active: true },
+            { id: 'ir-2', name: 'Depot Charger Bay Idle', limit: 15, notify_via: 'Dashboard Alert', is_active: true },
+            { id: 'ir-3', name: 'Bus Stand Wait Timeout', limit: 20, notify_via: 'Email Alert', is_active: false }
+          ],
+          batteryRules: [
+            { id: 'br-1', name: 'Critical Battery SoC', soc_limit: 15, temp_limit: 60, severity: 'Critical', is_active: true },
+            { id: 'br-2', name: 'Low Battery Alert', soc_limit: 25, temp_limit: 50, severity: 'Warning', is_active: true },
+            { id: 'br-3', name: 'Standard Charging Check', soc_limit: 80, temp_limit: 45, severity: 'Info', is_active: false }
+          ],
+          geofenceRules: [
+            { id: 'gr-1', name: 'Nagpur Central Depot Entry', geofence_name: 'Nagpur Central Depot', trigger_type: 'Enter & Exit', is_active: true },
+            { id: 'gr-2', name: 'Mumbai Express Route Exit', geofence_name: 'Mumbai Expressway Zone', trigger_type: 'Exit Only', is_active: true },
+            { id: 'gr-3', name: 'Mira Depot Workshop boundary', geofence_name: 'Mira Depot Maintenance Zone', trigger_type: 'Enter Only', is_active: false }
+          ],
+
+          initApp() {
+            // Watch local storage for persistent rules if needed, otherwise rely on mock sets
+          },
+
+          getActiveCategoryLabel() {
+            const cat = this.categories.find(c => c.key === this.activeCategory);
+            return cat ? cat.label : '';
+          },
+
+          getActiveCategoryDescription() {
+            const cat = this.categories.find(c => c.key === this.activeCategory);
+            return cat ? cat.desc : '';
+          },
+
+          // Search Filter Getters
+          get filteredSpeedingRules() {
+            return this.speedingRules.filter(i => i.name.toLowerCase().includes(this.searchQuery.toLowerCase()));
+          },
+          get filteredIdlingRules() {
+            return this.idlingRules.filter(i => i.name.toLowerCase().includes(this.searchQuery.toLowerCase()));
+          },
+          get filteredBatteryRules() {
+            return this.batteryRules.filter(i => i.name.toLowerCase().includes(this.searchQuery.toLowerCase()));
+          },
+          get filteredGeofenceRules() {
+            return this.geofenceRules.filter(i => i.name.toLowerCase().includes(this.searchQuery.toLowerCase()));
+          },
+
+          isEmpty() {
+            const cat = this.activeCategory;
+            if (cat === 'speeding') return this.filteredSpeedingRules.length === 0;
+            if (cat === 'idling') return this.filteredIdlingRules.length === 0;
+            if (cat === 'battery') return this.filteredBatteryRules.length === 0;
+            if (cat === 'geofence') return this.filteredGeofenceRules.length === 0;
+            return true;
+          },
+
+          setCategory(key) {
+            this.activeCategory = key;
+            this.searchQuery = '';
+          },
+
+          backToGrid() {
+            this.activeCategory = 'grid';
+            this.searchQuery = '';
+          },
+
+          showNotification(msg, type = 'success') {
+            if (type === 'success') {
+              this.successMessage = msg;
+              setTimeout(() => this.successMessage = null, 3000);
+            } else {
+              this.errorMessage = msg;
+              setTimeout(() => this.errorMessage = null, 3000);
+            }
+          },
+
+          toggleActiveState(item) {
+            item.is_active = !item.is_active;
+            this.showNotification(`State updated for: ${item.name}`);
+          },
+
+          openAddModal() {
+            this.isEditMode = false;
+            this.formData = {
+              id: null,
+              name: '',
+              limit: 50,
+              duration: 10,
+              severity: 'Warning',
+              notify_via: 'Dashboard Alert',
+              soc_limit: 20,
+              temp_limit: 50,
+              geofence_name: '',
+              trigger_type: 'Enter & Exit',
+              is_active: true
+            };
+            this.showModal = true;
+          },
+
+          openEditModal(item) {
+            this.isEditMode = true;
+            this.formData = { ...item };
+            this.showModal = true;
+          },
+
+          saveEntity() {
+            if (!this.formData.name.trim()) {
+              this.showNotification("Rule name cannot be empty.", "error");
+              return;
+            }
+
+            const cat = this.activeCategory;
+            const newId = this.formData.id || ('rule-' + Math.random().toString(36).substr(2, 9));
+            const entity = { ...this.formData, id: newId };
+
+            if (cat === 'speeding') {
+              if (this.isEditMode) {
+                this.speedingRules = this.speedingRules.map(i => i.id === newId ? entity : i);
+              } else {
+                this.speedingRules.push(entity);
+              }
+            } else if (cat === 'idling') {
+              if (this.isEditMode) {
+                this.idlingRules = this.idlingRules.map(i => i.id === newId ? entity : i);
+              } else {
+                this.idlingRules.push(entity);
+              }
+            } else if (cat === 'battery') {
+              if (this.isEditMode) {
+                this.batteryRules = this.batteryRules.map(i => i.id === newId ? entity : i);
+              } else {
+                this.batteryRules.push(entity);
+              }
+            } else if (cat === 'geofence') {
+              if (this.isEditMode) {
+                this.geofenceRules = this.geofenceRules.map(i => i.id === newId ? entity : i);
+              } else {
+                this.geofenceRules.push(entity);
+              }
+            }
+
+            this.showModal = false;
+            this.showNotification(`Successfully saved rule: ${entity.name}`);
+          },
+
+          deleteConfirm(id) {
+            if (confirm("Are you sure you want to delete this rule configuration?")) {
+              this.deleteEntity(id);
+            }
+          },
+
+          deleteEntity(id) {
+            const cat = this.activeCategory;
+            if (cat === 'speeding') {
+              this.speedingRules = this.speedingRules.filter(i => i.id !== id);
+            } else if (cat === 'idling') {
+              this.idlingRules = this.idlingRules.filter(i => i.id !== id);
+            } else if (cat === 'battery') {
+              this.batteryRules = this.batteryRules.filter(i => i.id !== id);
+            } else if (cat === 'geofence') {
+              this.geofenceRules = this.geofenceRules.filter(i => i.id !== id);
+            }
+            this.showNotification("Successfully deleted rule configuration!");
+          }
+        };
+      }
+    </script>
+  </body>
+</html>

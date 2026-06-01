@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport"
+    content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+  <title>Depot Cleaning | TransVolt</title>
+  <!-- Phosphor Icons for large, accessible iconography -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <style>
+    /* Ensure file inputs are fully hidden but functional via labels */
+    input[type="file"] {
+      display: none;
+    }
+  </style>
+</head>
+
+<body x-data="{
+      page: 'depot-cleaning',
+      currentDay: 'Monday',
+      days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+      schedule: {},
+      updateSchedule() {
+        const d = this.currentDay;
+        if (d === 'Sunday') {
+           this.schedule = {
+             'Washing Pits': [{ area: 'Washing Pit 1', task: 'Full Wash & Clean', completed: false }]
+           };
+           return;
+        }
+        
+        this.schedule = {
+          'Washing Pits': [
+            { area: 'Washing Pit 1', task: 'Full Wash & Clean', completed: false }
+          ],
+          'Maintenance Pits': [
+            { area: 'Pit 1', task: (d === 'Monday') ? 'FULL WASH' : 'Broom & Dust', completed: false },
+            { area: 'Pit 2', task: (d === 'Wednesday') ? 'FULL WASH' : 'Broom & Dust', completed: false },
+            { area: 'Pit 3', task: (d === 'Friday') ? 'FULL WASH' : 'Broom & Dust', completed: false }
+          ],
+          'Service Bays': [
+            { area: 'Bay 1', task: (d === 'Monday' || d === 'Saturday') ? 'FULL CLEAN' : 'Dust & Sweep', completed: false },
+            { area: 'Bay 2', task: (d === 'Tuesday') ? 'FULL CLEAN' : 'Dust & Sweep', completed: false },
+            { area: 'Bay 3', task: (d === 'Wednesday') ? 'FULL CLEAN' : 'Dust & Sweep', completed: false },
+            { area: 'Bay 4', task: (d === 'Thursday') ? 'FULL CLEAN' : 'Dust & Sweep', completed: false },
+            { area: 'Bay 5', task: (d === 'Friday') ? 'FULL CLEAN' : 'Dust & Sweep', completed: false }
+          ],
+          'Other Areas': [
+            { area: 'Admin Building', task: 'Daily Clean', completed: false },
+            { area: 'Charging Bays', task: 'Daily Clean', completed: false },
+            { area: 'Washrooms', task: 'Daily Clean', completed: false },
+            { area: 'Depot Premises', task: 'Daily Clean', completed: false }
+          ]
+        };
+      },
+      init() {
+        this.updateSchedule();
+        this.$watch('currentDay', () => {
+           this.updateSchedule();
+        });
+      },
+      loaded: true, 
+      darkMode: false, 
+      stickyMenu: false, 
+      sidebarToggle: false, 
+      scrollTop: false,
+      showConfirmModal: false
+    }" x-init="
+         init();
+         darkMode = JSON.parse(localStorage.getItem('darkMode')) || false;
+         $watch('darkMode', value => localStorage.setItem('darkMode', JSON.stringify(value)))"
+  :class="{'dark bg-gray-900': darkMode === true}">
+  <!-- ===== Preloader Start ===== -->
+  <include src="./partials/preloader.html"></include>
+  <!-- ===== Preloader End ===== -->
+
+  <!-- ===== Page Wrapper Start ===== -->
+  <div class="flex h-screen overflow-hidden">
+    <!-- ===== Sidebar Start ===== -->
+    <include src="./partials/sidebar.html"></include>
+    <!-- ===== Sidebar End ===== -->
+
+    <!-- ===== Content Area Start ===== -->
+    <div class="relative flex flex-col flex-1 overflow-x-hidden overflow-y-auto">
+      <!-- Small Device Overlay Start -->
+      <include src="./partials/overlay.html" />
+      <!-- Small Device Overlay End -->
+
+      <!-- ===== Header Start ===== -->
+      <include src="./partials/header.html" />
+      <!-- ===== Header End ===== -->
+
+      <!-- ===== Main Content Start ===== -->
+      
+      
+      
+      <main>
+        <div class="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">
+          
+          <div class="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-200 dark:border-gray-800 dark:bg-gray-900 shadow-sm">
+            <div>
+              <h2 class="text-title-md2 font-bold text-gray-800 dark:text-white/90">Depot Cleaning Schedule</h2>
+              <p class="text-base text-gray-500 dark:text-gray-400 mt-1">Review and manage the segregated daily tasks for all premises.</p>
+            </div>
+            
+            <div class="flex items-center gap-4 relative z-20">
+              <div class="relative bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl shadow-sm w-48 hover:border-brand-500 transition-colors">
+                <select x-model="currentDay" class="w-full bg-transparent py-3 pl-5 pr-12 outline-none appearance-none font-bold text-brand-600 dark:text-brand-400 cursor-pointer text-lg">
+                  <template x-for="day in days" :key="day">
+                    <option :value="day" x-text="day"></option>
+                  </template>
+                </select>
+                <span class="absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none text-brand-500">
+                  <i class="ph ph-calendar-blank text-xl"></i>
+                </span>
+              </div>
+              <div class="relative bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl shadow-sm hover:border-brand-500 transition-colors">
+                <input type="date" class="w-full bg-transparent py-3 px-5 outline-none font-bold text-gray-700 dark:text-gray-300 cursor-pointer" />
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            <template x-for="(items, category) in schedule" :key="category">
+              <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900 flex flex-col" x-show="items && items.length > 0">
+                
+                <h3 class="text-xl font-bold text-gray-800 dark:text-white/90 mb-5 flex items-center gap-3">
+                  <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800 text-xl font-bold">
+                    <i class="ph" :class="
+                      category.includes('Washing') ? 'ph-drop text-blue-500' : 
+                      category.includes('Maintenance') ? 'ph-wrench text-orange-500' : 
+                      category.includes('Service') ? 'ph-garage text-brand-500' : 
+                      'ph-buildings text-purple-500'
+                    "></i>
+                  </div>
+                  <span x-text="category"></span>
+                  <span class="ml-auto bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-sm py-1 px-3 rounded-full font-semibold">
+                    <span x-text="items.filter(i => i.completed).length"></span> / <span x-text="items.length"></span>
+                  </span>
+                </h3>
+                 
+                <div class="space-y-3 flex-1">
+                  <template x-for="(item, index) in items" :key="index">
+                    <div @click="item.completed = !item.completed" 
+                         class="cursor-pointer rounded-xl border p-4 transition-all flex items-center justify-between gap-4 group"
+                         :class="item.completed ? 'bg-success-50 dark:bg-success-500/10 border-success-200 dark:border-success-500/30' : 'bg-gray-50 border-gray-100 hover:border-brand-300 hover:shadow-sm dark:bg-gray-800/50 dark:border-gray-700/50 dark:hover:border-brand-500/50'">
+                        <div>
+                          <h4 class="font-bold text-md transition-colors" :class="item.completed ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-800 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400'" x-text="item.area"></h4>
+                          <p class="text-sm font-semibold mt-1" 
+                             :class="item.completed ? 'text-gray-400 dark:text-gray-500 line-through' : (item.task.includes('FULL') ? 'text-brand-500' : 'text-gray-500 dark:text-gray-400')" 
+                             x-text="item.task"></p>
+                        </div>
+                        <div class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors" 
+                             :class="item.completed ? 'border-success-500 bg-success-500 text-white shadow-sm' : 'border-gray-300 dark:border-gray-600 text-transparent group-hover:border-brand-400'">
+                          <i class="ph ph-check font-bold text-sm" x-show="item.completed"></i>
+                        </div>
+                    </div>
+                  </template>
+                </div>
+
+              </div>
+            </template>
+
+          </div>
+          
+          <div class="mt-8">
+            <button @click="showConfirmModal = true" class="w-full rounded-2xl py-4 font-bold text-white text-lg transition-all bg-brand-500 hover:bg-brand-600 shadow-lg hover:shadow-brand-500/25 active:scale-[0.99]">
+              Submit Daily Report
+            </button>
+          </div>
+
+        </div>
+      </main>
+
+
+
+      <!-- ===== Main Content End ===== -->
+    </div>
+    <!-- ===== Content Area End ===== -->
+
+    <!-- Confirmation Modal -->
+    <div x-show="showConfirmModal" class="fixed inset-0 z-[999999] flex items-center justify-center bg-black/50 backdrop-blur-sm" style="display: none;">
+      <div @click.outside="showConfirmModal = false" class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-800 border border-gray-200 dark:border-gray-700 m-4">
+        <div class="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-warning-100 dark:bg-warning-500/20 text-warning-600 dark:text-warning-500 mx-auto">
+          <i class="ph ph-warning-circle text-3xl"></i>
+        </div>
+        <h3 class="text-xl font-bold text-gray-800 dark:text-white text-center mb-2">Submit Daily Report?</h3>
+        <p class="text-gray-500 dark:text-gray-400 text-center mb-6">Are you sure you want to submit today's cleaning report? This action cannot be undone.</p>
+        <div class="flex gap-4">
+          <button @click="showConfirmModal = false" class="flex-1 rounded-xl bg-gray-100 py-3 font-bold text-gray-700 transition hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">Cancel</button>
+          <button @click="showConfirmModal = false; alert('Report Submitted Successfully!')" class="flex-1 rounded-xl bg-brand-500 py-3 font-bold text-white transition hover:bg-brand-600 shadow-sm">Confirm</button>
+        </div>
+      </div>
+    </div>
+    <!-- ===== Content Area End ===== -->
+  </div>
+  <!-- ===== Page Wrapper End ===== -->
+  <svg style="visibility: hidden; position: absolute;" width="0" height="0" xmlns="http://www.w3.org/2000/svg" version="1.1">
+    <defs>
+      <filter id="goo" x="-50%" y="-50%" width="200%" height="300%">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
+        <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 19 -9" result="goo" />
+        <feComposite in="SourceGraphic" in2="goo" operator="atop"/>
+      </filter>
+    </defs>
+  </svg>
+</body>
+</html>

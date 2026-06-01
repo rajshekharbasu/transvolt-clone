@@ -1,0 +1,21 @@
+# Dependency directories
+node_modules/
+tailadmin template/node_modules/
+transvolt-cleaning-module/node_modules/
+
+# Build outputs
+build/
+tailadmin template/build/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# IDE configurations
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
