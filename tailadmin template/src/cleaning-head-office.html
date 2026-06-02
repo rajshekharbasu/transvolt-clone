@@ -139,9 +139,64 @@
                   <button @click="trendPeriod = '3 Months'" :class="trendPeriod === '3 Months' ? 'bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400 border border-brand-200 dark:border-brand-800' : 'bg-white text-gray-600 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700'" class="px-3 py-1 text-xs font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">3 Months</button>
                 </div>
               </div>
-              <div class="grid grid-cols-1 gap-6 xl:grid-cols-2 mb-8">
+              <div 
+                x-data="{ 
+                  splitPercent: 50, 
+                  isDragging: false, 
+                  startX: 0, 
+                  startPercent: 50,
+                  containerWidth: 0,
+                  isLargeScreen: window.innerWidth >= 1280,
+                  init() {
+                    window.addEventListener('resize', () => {
+                      this.isLargeScreen = window.innerWidth >= 1280;
+                    });
+                  },
+                  startDrag(e) {
+                    this.isDragging = true;
+                    const isTouch = e.type.startsWith('touch');
+                    this.startX = isTouch ? e.touches[0].clientX : e.clientX;
+                    this.startPercent = this.splitPercent;
+                    this.containerWidth = this.$refs.splitContainer.getBoundingClientRect().width;
+                    
+                    const onMove = (moveEvent) => {
+                      if (!this.isDragging) return;
+                      const clientX = moveEvent.type.startsWith('touch') ? moveEvent.touches[0].clientX : moveEvent.clientX;
+                      const deltaX = clientX - this.startX;
+                      const deltaPercent = (deltaX / this.containerWidth) * 100;
+                      this.splitPercent = Math.min(Math.max(this.startPercent + deltaPercent, 25), 75);
+                    };
+                    
+                    const onEnd = () => {
+                      this.isDragging = false;
+                      if (isTouch) {
+                        window.removeEventListener('touchmove', onMove);
+                        window.removeEventListener('touchend', onEnd);
+                      } else {
+                        window.removeEventListener('mousemove', onMove);
+                        window.removeEventListener('mouseup', onEnd);
+                      }
+                    };
+                    
+                    if (isTouch) {
+                      window.addEventListener('touchmove', onMove, { passive: true });
+                      window.addEventListener('touchend', onEnd);
+                    } else {
+                      window.addEventListener('mousemove', onMove);
+                      window.addEventListener('mouseup', onEnd);
+                    }
+                  }
+                }"
+                x-ref="splitContainer"
+                class="flex flex-col xl:flex-row mb-8 items-stretch"
+                :class="[isLargeScreen ? 'gap-0' : 'gap-6', isDragging ? 'select-none' : '']"
+              >
                 <!-- SLA Adherence Comparison -->
-                <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-800">
+                <div 
+                  :style="isLargeScreen ? 'width: calc(' + splitPercent + '% - 12px)' : ''"
+                  class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-800"
+                  :class="isDragging ? 'transition-none cursor-col-resize' : 'transition-all duration-200'"
+                >
                   <h3 class="text-lg font-bold text-gray-800 dark:text-white/90 mb-6">SLA Adherence by Depot</h3>
                   <div class="space-y-4">
                     <!-- Mira Bhayander -->
@@ -177,8 +232,28 @@
                   </div>
                 </div>
 
+                <!-- Draggable Divider (Splitter) -->
+                <div 
+                  x-show="isLargeScreen"
+                  @mousedown="startDrag($event)"
+                  @touchstart="startDrag($event)"
+                  class="w-6 flex items-center justify-center cursor-col-resize select-none relative group self-stretch"
+                >
+                  <div class="w-1.5 h-3/4 bg-gray-200 dark:bg-gray-800 group-hover:bg-brand-500 dark:group-hover:bg-brand-400 rounded-full transition-all duration-150 group-hover:w-2"></div>
+                  <!-- Subtle grip dots -->
+                  <div class="absolute flex flex-col gap-1 items-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                    <span class="w-1 h-1 rounded-full bg-white dark:bg-gray-900"></span>
+                    <span class="w-1 h-1 rounded-full bg-white dark:bg-gray-900"></span>
+                    <span class="w-1 h-1 rounded-full bg-white dark:bg-gray-900"></span>
+                  </div>
+                </div>
+
                 <!-- Cost / Efficiency Visualisation -->
-                <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-800">
+                <div 
+                  :style="isLargeScreen ? 'width: calc(' + (100 - splitPercent) + '% - 12px)' : ''"
+                  class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-800"
+                  :class="isDragging ? 'transition-none cursor-col-resize' : 'transition-all duration-200'"
+                >
                   <h3 class="text-lg font-bold text-gray-800 dark:text-white/90 mb-6">Cleaning Time Efficiency (Avg Mins)</h3>
                   <div class="flex items-end justify-center gap-6 h-32 mt-4 px-2">
                     <!-- Bar 1 -->
