@@ -205,8 +205,15 @@
                         <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Mira Bhayander</span>
                         <span class="text-sm font-bold text-success-600 dark:text-success-400" x-text="trendPeriod === '7 Days' ? '96%' : trendPeriod === '30 Days' ? '94%' : '90%'">96%</span>
                       </div>
-                      <div class="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
-                        <div :class="trendPeriod === '3 Months' ? 'bg-success-400' : 'bg-success-500'" class="h-2 rounded-full transition-all duration-500" :style="`width: ${trendPeriod === '7 Days' ? 96 : trendPeriod === '30 Days' ? 94 : 90}%`"></div>
+                      <div class="flex items-center gap-1.5 h-2">
+                        <template x-for="i in 10">
+                          <span 
+                            class="h-2 w-2 rounded-full transition-all duration-300"
+                            :class="i * 10 <= (trendPeriod === '7 Days' ? 96 : trendPeriod === '30 Days' ? 94 : 90) 
+                              ? (trendPeriod === '3 Months' ? 'bg-success-400' : 'bg-success-500') 
+                              : 'bg-gray-200 dark:bg-gray-700'"
+                          ></span>
+                        </template>
                       </div>
                     </div>
                     <!-- Nagpur - Depot 1 -->
@@ -215,8 +222,15 @@
                         <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Nagpur - Depot 1</span>
                         <span class="text-sm font-bold text-success-600 dark:text-success-400" :class="trendPeriod === '3 Months' ? 'text-warning-600 dark:text-warning-400' : 'text-success-600 dark:text-success-400'" x-text="trendPeriod === '7 Days' ? '92%' : trendPeriod === '30 Days' ? '89%' : '85%'">92%</span>
                       </div>
-                      <div class="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
-                        <div :class="trendPeriod === '3 Months' ? 'bg-warning-500' : 'bg-success-500'" class="h-2 rounded-full transition-all duration-500" :style="`width: ${trendPeriod === '7 Days' ? 92 : trendPeriod === '30 Days' ? 89 : 85}%`"></div>
+                      <div class="flex items-center gap-1.5 h-2">
+                        <template x-for="i in 10">
+                          <span 
+                            class="h-2 w-2 rounded-full transition-all duration-300"
+                            :class="i * 10 <= (trendPeriod === '7 Days' ? 92 : trendPeriod === '30 Days' ? 89 : 85) 
+                              ? (trendPeriod === '3 Months' ? 'bg-warning-500' : 'bg-success-500') 
+                              : 'bg-gray-200 dark:bg-gray-700'"
+                          ></span>
+                        </template>
                       </div>
                     </div>
                     <!-- Nagpur - Depot 2 -->
@@ -225,8 +239,15 @@
                         <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Nagpur - Depot 2</span>
                         <span class="text-sm font-bold" :class="trendPeriod === '3 Months' ? 'text-error-600 dark:text-error-400' : 'text-warning-600 dark:text-warning-400'" x-text="trendPeriod === '7 Days' ? '84%' : trendPeriod === '30 Days' ? '81%' : '76%'">84%</span>
                       </div>
-                      <div class="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
-                        <div :class="trendPeriod === '3 Months' ? 'bg-error-500' : 'bg-warning-500'" class="h-2 rounded-full transition-all duration-500" :style="`width: ${trendPeriod === '7 Days' ? 84 : trendPeriod === '30 Days' ? 81 : 76}%`"></div>
+                      <div class="flex items-center gap-1.5 h-2">
+                        <template x-for="i in 10">
+                          <span 
+                            class="h-2 w-2 rounded-full transition-all duration-300"
+                            :class="i * 10 <= (trendPeriod === '7 Days' ? 84 : trendPeriod === '30 Days' ? 81 : 76) 
+                              ? (trendPeriod === '3 Months' ? 'bg-error-500' : 'bg-warning-500') 
+                              : 'bg-gray-200 dark:bg-gray-700'"
+                          ></span>
+                        </template>
                       </div>
                     </div>
                   </div>
