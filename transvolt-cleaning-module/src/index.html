@@ -24,10 +24,28 @@
       selectedDepot: null,
       activeCategory: null,
       busDetailsModalOpen: false,
-      selectedBusId: null
+      selectedBusId: null,
+      trendPeriod: '7 Days',
+      startDate: '2026-05-29',
+      endDate: '2026-06-04',
+      updatePeriod() {
+        const start = new Date(this.startDate);
+        const end = new Date(this.endDate);
+        const diffTime = Math.abs(end - start);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        if (diffDays <= 7) {
+          this.trendPeriod = '7 Days';
+        } else if (diffDays <= 30) {
+          this.trendPeriod = '30 Days';
+        } else {
+          this.trendPeriod = '3 Months';
+        }
+      }
     }" x-init="
          darkMode = JSON.parse(localStorage.getItem('darkMode'));
-         $watch('darkMode', value => localStorage.setItem('darkMode', JSON.stringify(value)))"
+         $watch('darkMode', value => localStorage.setItem('darkMode', JSON.stringify(value)));
+         $watch('startDate', () => this.updatePeriod());
+         $watch('endDate', () => this.updatePeriod())"
   :class="{'dark bg-gray-900': darkMode === true}">
   <!-- ===== Preloader Start ===== -->
   <include src="./partials/preloader.html"></include>
@@ -53,13 +71,20 @@
       <main>
         <div class="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">
 
-          <!-- Dynamic Header -->
+           <!-- Dynamic Header -->
           <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div class="flex items-center gap-3">
               <!-- Back Button -->
               <button x-show="currentLevel !== 'network'" style="display: none;" @click="
-                  if (currentLevel === 'fleet_list') currentLevel = 'depot';
-                  else if (currentLevel === 'depot') currentLevel = 'network';
+                  if (currentLevel === 'fleet_list') {
+                    if (selectedDepot === 'All Depots' || !selectedDepot) {
+                      currentLevel = 'network';
+                    } else {
+                      currentLevel = 'depot';
+                    }
+                  } else if (currentLevel === 'depot') {
+                    currentLevel = 'network';
+                  }
                 " class="flex h-10 w-10 items-center justify-center rounded-xl bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700">
                 <i class="ph ph-arrow-left text-xl"></i>
               </button>
@@ -69,7 +94,7 @@
                 <h2 class="text-title-md2 font-bold text-gray-800 dark:text-white/90" x-text="
                   currentLevel === 'network' ? 'Network Overview' :
                   currentLevel === 'depot' ? selectedDepot + ' Overview' :
-                  selectedDepot + ' - ' + (activeCategory === 'fleet' ? 'Total Fleet Details' : activeCategory === 'route' ? 'Buses On Route' : activeCategory === 'cleaned' ? 'Cleaned Today' : 'Maintenance / Hold')
+                  selectedDepot + ' - ' + (activeCategory === 'fleet' ? 'Total Fleet Details' : activeCategory === 'route' ? 'Buses On Route' : activeCategory === 'cleaned' ? 'Cleaned Today' : activeCategory === 'alerts' ? 'Critical Alerts' : 'Maintenance / Hold')
                 ">Network Overview</h2>
                 <p x-show="currentLevel === 'network'" class="text-sm font-medium text-gray-500 dark:text-gray-400">Head Office Global Monitoring</p>
               </div>
@@ -83,7 +108,7 @@
             
             <!-- Global KPIs -->
             <div class="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6 mb-8">
-              <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-800">
+              <div @click="document.getElementById('regional-depots').scrollIntoView({ behavior: 'smooth' })" class="cursor-pointer hover:shadow-md hover:scale-[1.01] transition-all rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-800">
                 <div class="flex items-center gap-3 md:gap-4">
                   <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
                     <i class="ph ph-map-pin text-2xl"></i>
@@ -94,7 +119,7 @@
                   </div>
                 </div>
               </div>
-              <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-800">
+              <div @click="selectedDepot = 'All Depots'; activeCategory = 'fleet'; currentLevel = 'fleet_list'" class="cursor-pointer hover:shadow-md hover:scale-[1.01] transition-all rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-800">
                 <div class="flex items-center gap-3 md:gap-4">
                   <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
                     <i class="ph ph-bus text-2xl"></i>
@@ -116,7 +141,7 @@
                   </div>
                 </div>
               </div>
-              <div class="rounded-2xl border border-error-200 bg-error-50 p-5 shadow-sm dark:border-error-900 dark:bg-error-500/10">
+              <div @click="selectedDepot = 'All Depots'; activeCategory = 'alerts'; currentLevel = 'fleet_list'" class="cursor-pointer hover:shadow-md hover:scale-[1.01] transition-all rounded-2xl border border-error-200 bg-error-50 p-5 shadow-sm dark:border-error-900 dark:bg-error-500/10">
                 <div class="flex items-center gap-3 md:gap-4">
                   <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-error-100 text-error-600 dark:bg-error-500/20 dark:text-error-500">
                     <i class="ph ph-warning-circle text-2xl"></i>
@@ -130,18 +155,78 @@
             </div>
 
             <!-- Charts & Visualisations -->
-            <div x-data="{ trendPeriod: '7 Days' }">
-              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+            <div>
+              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4">
                 <h3 class="text-lg font-bold text-gray-800 dark:text-white/90">Trends & Visualisations</h3>
-                <div class="flex items-center gap-2 mt-2 sm:mt-0">
-                  <button @click="trendPeriod = '7 Days'" :class="trendPeriod === '7 Days' ? 'bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400 border border-brand-200 dark:border-brand-800' : 'bg-white text-gray-600 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700'" class="px-3 py-1 text-xs font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">7 Days</button>
-                  <button @click="trendPeriod = '30 Days'" :class="trendPeriod === '30 Days' ? 'bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400 border border-brand-200 dark:border-brand-800' : 'bg-white text-gray-600 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700'" class="px-3 py-1 text-xs font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">30 Days</button>
-                  <button @click="trendPeriod = '3 Months'" :class="trendPeriod === '3 Months' ? 'bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400 border border-brand-200 dark:border-brand-800' : 'bg-white text-gray-600 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700'" class="px-3 py-1 text-xs font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">3 Months</button>
+                <div class="flex items-center gap-3 mt-2 sm:mt-0 flex-wrap bg-white dark:bg-gray-800 p-2 rounded-xl border border-gray-200 dark:border-gray-700 shadow-xs">
+                  <div class="flex items-center gap-1">
+                    <span class="text-xs font-bold text-gray-500 uppercase">From:</span>
+                    <input type="date" x-model="startDate" class="bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white text-xs rounded-lg focus:ring-brand-500 focus:border-brand-500 p-1.5 outline-none cursor-pointer">
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <span class="text-xs font-bold text-gray-500 uppercase">To:</span>
+                    <input type="date" x-model="endDate" class="bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white text-xs rounded-lg focus:ring-brand-500 focus:border-brand-500 p-1.5 outline-none cursor-pointer">
+                  </div>
                 </div>
               </div>
-              <div class="grid grid-cols-1 gap-6 xl:grid-cols-2 mb-8">
+              <div 
+                x-data="{ 
+                  splitPercent: 50, 
+                  isDragging: false, 
+                  startX: 0, 
+                  startPercent: 50,
+                  containerWidth: 0,
+                  isLargeScreen: window.innerWidth >= 1280,
+                  init() {
+                    window.addEventListener('resize', () => {
+                      this.isLargeScreen = window.innerWidth >= 1280;
+                    });
+                  },
+                  startDrag(e) {
+                    this.isDragging = true;
+                    const isTouch = e.type.startsWith('touch');
+                    this.startX = isTouch ? e.touches[0].clientX : e.clientX;
+                    this.startPercent = this.splitPercent;
+                    this.containerWidth = this.$refs.splitContainer.getBoundingClientRect().width;
+                    
+                    const onMove = (moveEvent) => {
+                      if (!this.isDragging) return;
+                      const clientX = moveEvent.type.startsWith('touch') ? moveEvent.touches[0].clientX : moveEvent.clientX;
+                      const deltaX = clientX - this.startX;
+                      const deltaPercent = (deltaX / this.containerWidth) * 100;
+                      this.splitPercent = Math.min(Math.max(this.startPercent + deltaPercent, 25), 75);
+                    };
+                    
+                    const onEnd = () => {
+                      this.isDragging = false;
+                      if (isTouch) {
+                        window.removeEventListener('touchmove', onMove);
+                        window.removeEventListener('touchend', onEnd);
+                      } else {
+                        window.removeEventListener('mousemove', onMove);
+                        window.removeEventListener('mouseup', onEnd);
+                      }
+                    };
+                    
+                    if (isTouch) {
+                      window.addEventListener('touchmove', onMove, { passive: true });
+                      window.addEventListener('touchend', onEnd);
+                    } else {
+                      window.addEventListener('mousemove', onMove);
+                      window.addEventListener('mouseup', onEnd);
+                    }
+                  }
+                }"
+                x-ref="splitContainer"
+                class="flex flex-col xl:flex-row mb-8 items-stretch"
+                :class="[isLargeScreen ? 'gap-0' : 'gap-6', isDragging ? 'select-none' : '']"
+              >
                 <!-- SLA Adherence Comparison -->
-                <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-800">
+                <div 
+                  :style="isLargeScreen ? 'width: calc(' + splitPercent + '% - 12px)' : ''"
+                  class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-800"
+                  :class="isDragging ? 'transition-none cursor-col-resize' : 'transition-all duration-200'"
+                >
                   <h3 class="text-lg font-bold text-gray-800 dark:text-white/90 mb-6">SLA Adherence by Depot</h3>
                   <div class="space-y-4">
                     <!-- Mira Bhayander -->
@@ -150,8 +235,15 @@
                         <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Mira Bhayander</span>
                         <span class="text-sm font-bold text-success-600 dark:text-success-400" x-text="trendPeriod === '7 Days' ? '96%' : trendPeriod === '30 Days' ? '94%' : '90%'">96%</span>
                       </div>
-                      <div class="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
-                        <div :class="trendPeriod === '3 Months' ? 'bg-success-400' : 'bg-success-500'" class="h-2 rounded-full transition-all duration-500" :style="`width: ${trendPeriod === '7 Days' ? 96 : trendPeriod === '30 Days' ? 94 : 90}%`"></div>
+                      <div class="flex items-center gap-1 h-2">
+                        <template x-for="i in 25">
+                          <span 
+                            class="h-2 w-2 rounded-full transition-all duration-300"
+                            :class="i * 4 <= (trendPeriod === '7 Days' ? 96 : trendPeriod === '30 Days' ? 94 : 90) 
+                              ? (trendPeriod === '3 Months' ? 'bg-success-400' : 'bg-success-500') 
+                              : 'bg-gray-200 dark:bg-gray-700'"
+                          ></span>
+                        </template>
                       </div>
                     </div>
                     <!-- Nagpur - Depot 1 -->
@@ -160,8 +252,15 @@
                         <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Nagpur - Depot 1</span>
                         <span class="text-sm font-bold text-success-600 dark:text-success-400" :class="trendPeriod === '3 Months' ? 'text-warning-600 dark:text-warning-400' : 'text-success-600 dark:text-success-400'" x-text="trendPeriod === '7 Days' ? '92%' : trendPeriod === '30 Days' ? '89%' : '85%'">92%</span>
                       </div>
-                      <div class="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
-                        <div :class="trendPeriod === '3 Months' ? 'bg-warning-500' : 'bg-success-500'" class="h-2 rounded-full transition-all duration-500" :style="`width: ${trendPeriod === '7 Days' ? 92 : trendPeriod === '30 Days' ? 89 : 85}%`"></div>
+                      <div class="flex items-center gap-1 h-2">
+                        <template x-for="i in 25">
+                          <span 
+                            class="h-2 w-2 rounded-full transition-all duration-300"
+                            :class="i * 4 <= (trendPeriod === '7 Days' ? 92 : trendPeriod === '30 Days' ? 89 : 85) 
+                              ? (trendPeriod === '3 Months' ? 'bg-warning-500' : 'bg-success-500') 
+                              : 'bg-gray-200 dark:bg-gray-700'"
+                          ></span>
+                        </template>
                       </div>
                     </div>
                     <!-- Nagpur - Depot 2 -->
@@ -170,39 +269,66 @@
                         <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Nagpur - Depot 2</span>
                         <span class="text-sm font-bold" :class="trendPeriod === '3 Months' ? 'text-error-600 dark:text-error-400' : 'text-warning-600 dark:text-warning-400'" x-text="trendPeriod === '7 Days' ? '84%' : trendPeriod === '30 Days' ? '81%' : '76%'">84%</span>
                       </div>
-                      <div class="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
-                        <div :class="trendPeriod === '3 Months' ? 'bg-error-500' : 'bg-warning-500'" class="h-2 rounded-full transition-all duration-500" :style="`width: ${trendPeriod === '7 Days' ? 84 : trendPeriod === '30 Days' ? 81 : 76}%`"></div>
+                      <div class="flex items-center gap-1 h-2">
+                        <template x-for="i in 25">
+                          <span 
+                            class="h-2 w-2 rounded-full transition-all duration-300"
+                            :class="i * 4 <= (trendPeriod === '7 Days' ? 84 : trendPeriod === '30 Days' ? 81 : 76) 
+                              ? (trendPeriod === '3 Months' ? 'bg-error-500' : 'bg-warning-500') 
+                              : 'bg-gray-200 dark:bg-gray-700'"
+                          ></span>
+                        </template>
                       </div>
                     </div>
                   </div>
                 </div>
 
+                <!-- Draggable Divider (Splitter) -->
+                <div 
+                  x-show="isLargeScreen"
+                  @mousedown="startDrag($event)"
+                  @touchstart="startDrag($event)"
+                  class="w-6 flex items-center justify-center cursor-col-resize select-none relative group self-stretch"
+                >
+                  <div class="w-1.5 h-3/4 bg-gray-200 dark:bg-gray-800 group-hover:bg-brand-500 dark:group-hover:bg-brand-400 rounded-full transition-all duration-150 group-hover:w-2"></div>
+                  <!-- Subtle grip dots -->
+                  <div class="absolute flex flex-col gap-1 items-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                    <span class="w-1 h-1 rounded-full bg-white dark:bg-gray-900"></span>
+                    <span class="w-1 h-1 rounded-full bg-white dark:bg-gray-900"></span>
+                    <span class="w-1 h-1 rounded-full bg-white dark:bg-gray-900"></span>
+                  </div>
+                </div>
+
                 <!-- Cost / Efficiency Visualisation -->
-                <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-800">
+                <div 
+                  :style="isLargeScreen ? 'width: calc(' + (100 - splitPercent) + '% - 12px)' : ''"
+                  class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-800"
+                  :class="isDragging ? 'transition-none cursor-col-resize' : 'transition-all duration-200'"
+                >
                   <h3 class="text-lg font-bold text-gray-800 dark:text-white/90 mb-6">Cleaning Time Efficiency (Avg Mins)</h3>
-                  <div class="flex items-end gap-4 h-32 mt-4 px-2">
+                  <div class="flex items-end justify-center gap-6 h-32 mt-4 px-2">
                     <!-- Bar 1 -->
-                    <div class="flex flex-col items-center flex-1">
-                      <div class="w-full bg-brand-500 rounded-t-sm dark:bg-brand-600 hover:opacity-80 transition-all duration-500 relative group"
+                    <div class="flex flex-col items-center w-28">
+                      <div class="w-8 bg-brand-500 rounded-t-md dark:bg-brand-600 hover:opacity-80 transition-all duration-500 relative group"
                            :style="`height: ${trendPeriod === '7 Days' ? '64px' : trendPeriod === '30 Days' ? '76px' : '88px'}`">
                         <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10" x-text="trendPeriod === '7 Days' ? '8m 15s' : trendPeriod === '30 Days' ? '9m 20s' : '10m 05s'">8m 15s</div>
                       </div>
                       <span class="text-xs font-medium text-gray-500 mt-2 text-center">Mira Bhayander</span>
                     </div>
                     <!-- Bar 2 -->
-                    <div class="flex flex-col items-center flex-1">
-                      <div class="w-full bg-brand-500 rounded-t-sm dark:bg-brand-600 hover:opacity-80 transition-all duration-500 relative group"
+                    <div class="flex flex-col items-center w-28">
+                      <div class="w-8 bg-brand-500 rounded-t-md dark:bg-brand-600 hover:opacity-80 transition-all duration-500 relative group"
                            :style="`height: ${trendPeriod === '7 Days' ? '80px' : trendPeriod === '30 Days' ? '96px' : '112px'}`">
-                         <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10" x-text="trendPeriod === '7 Days' ? '10m 12s' : trendPeriod === '30 Days' ? '11m 45s' : '13m 10s'">10m 12s</div>
+                          <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10" x-text="trendPeriod === '7 Days' ? '10m 12s' : trendPeriod === '30 Days' ? '11m 45s' : '13m 10s'">10m 12s</div>
                       </div>
                       <span class="text-xs font-medium text-gray-500 mt-2 text-center">Nagpur D1</span>
                     </div>
                     <!-- Bar 3 -->
-                    <div class="flex flex-col items-center flex-1">
-                      <div class="w-full rounded-t-sm hover:opacity-80 transition-all duration-500 relative group"
+                    <div class="flex flex-col items-center w-28">
+                      <div class="w-8 rounded-t-md hover:opacity-80 transition-all duration-500 relative group"
                            :class="trendPeriod === '3 Months' ? 'bg-error-400 dark:bg-error-500' : 'bg-warning-400 dark:bg-warning-500'"
                            :style="`height: ${trendPeriod === '7 Days' ? '112px' : trendPeriod === '30 Days' ? '128px' : '144px'}`">
-                         <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10" x-text="trendPeriod === '7 Days' ? '14m 30s' : trendPeriod === '30 Days' ? '16m 15s' : '18m 45s'">14m 30s</div>
+                          <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10" x-text="trendPeriod === '7 Days' ? '14m 30s' : trendPeriod === '30 Days' ? '16m 15s' : '18m 45s'">14m 30s</div>
                       </div>
                       <span class="text-xs font-medium text-gray-500 mt-2 text-center">Nagpur D2</span>
                     </div>
@@ -210,12 +336,90 @@
                 </div>
               </div>
             </div>
+            <!-- Fines Trends Section -->
+            <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-850 mb-8">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div>
+                  <h3 class="text-lg font-bold text-gray-800 dark:text-white/90">SLA Fines Trend & Violation Types</h3>
+                  <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Breakdown of SLA fines and violation categories over the custom timeframe.</p>
+                </div>
+                <div class="bg-error-50 dark:bg-error-500/10 border border-error-100 dark:border-error-500/20 rounded-xl px-4 py-2 flex items-center gap-3">
+                  <i class="ph ph-receipt text-error-500 text-xl"></i>
+                  <div>
+                    <span class="text-xs text-error-700 dark:text-error-400 block font-semibold">Total Fines in Period</span>
+                    <span class="text-sm font-black text-error-600 dark:text-error-400" x-text="trendPeriod === '7 Days' ? 'INR 1,330' : trendPeriod === '30 Days' ? 'INR 4,620' : 'INR 12,450'">INR 1,330</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- Missed Deadline -->
+                <div @click="window.location.href='fines.html?type=Delay'" class="cursor-pointer hover:shadow-md hover:scale-[1.01] hover:border-brand-500 transition-all rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-850/50 p-4 flex flex-col justify-between">
+                  <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase">Missed Deadline</span>
+                    <span class="text-xs font-bold text-error-600 bg-error-50 dark:bg-error-500/10 dark:text-error-400 px-2 py-0.5 rounded-full">45%</span>
+                  </div>
+                  <div>
+                    <h4 class="text-xl font-black text-gray-800 dark:text-white" x-text="trendPeriod === '7 Days' ? 'INR 600' : trendPeriod === '30 Days' ? 'INR 2,100' : 'INR 5,600'">INR 600</h4>
+                    <span class="text-xs text-gray-500 dark:text-gray-400 mt-1 block">Delay in turnaround</span>
+                  </div>
+                  <div class="w-full bg-gray-200 dark:bg-gray-700 h-1.5 rounded-full mt-4 overflow-hidden">
+                    <div class="bg-error-500 h-full rounded-full" style="width: 45%;"></div>
+                  </div>
+                </div>
+                
+                <!-- Cleaning Standard Non-Compliance -->
+                <div @click="window.location.href='fines.html?type=Quality&search=Non-Compliance'" class="cursor-pointer hover:shadow-md hover:scale-[1.01] hover:border-brand-500 transition-all rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-850/50 p-4 flex flex-col justify-between">
+                  <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase">Non-Compliance</span>
+                    <span class="text-xs font-bold text-warning-600 bg-warning-50 dark:bg-warning-500/10 dark:text-warning-400 px-2 py-0.5 rounded-full">29%</span>
+                  </div>
+                  <div>
+                    <h4 class="text-xl font-black text-gray-800 dark:text-white" x-text="trendPeriod === '7 Days' ? 'INR 385' : trendPeriod === '30 Days' ? 'INR 1,340' : 'INR 3,610'">INR 385</h4>
+                    <span class="text-xs text-gray-500 dark:text-gray-400 mt-1 block">SOP Standards failed</span>
+                  </div>
+                  <div class="w-full bg-gray-200 dark:bg-gray-700 h-1.5 rounded-full mt-4 overflow-hidden">
+                    <div class="bg-warning-500 h-full rounded-full" style="width: 29%;"></div>
+                  </div>
+                </div>
+                
+                <!-- Passenger Complaint -->
+                <div @click="window.location.href='fines.html?type=Quality&search=Complaint'" class="cursor-pointer hover:shadow-md hover:scale-[1.01] hover:border-brand-500 transition-all rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-850/50 p-4 flex flex-col justify-between">
+                  <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase">Complaints</span>
+                    <span class="text-xs font-bold text-purple-600 bg-purple-50 dark:bg-purple-500/10 dark:text-purple-400 px-2 py-0.5 rounded-full">17%</span>
+                  </div>
+                  <div>
+                    <h4 class="text-xl font-black text-gray-800 dark:text-white" x-text="trendPeriod === '7 Days' ? 'INR 225' : trendPeriod === '30 Days' ? 'INR 780' : 'INR 2,120'">INR 225</h4>
+                    <span class="text-xs text-gray-500 dark:text-gray-400 mt-1 block">Feedback reports</span>
+                  </div>
+                  <div class="w-full bg-gray-200 dark:bg-gray-700 h-1.5 rounded-full mt-4 overflow-hidden">
+                    <div class="bg-purple-500 h-full rounded-full" style="width: 17%;"></div>
+                  </div>
+                </div>
+                
+                <!-- Unsatisfactory Quality -->
+                <div @click="window.location.href='fines.html?type=Quality&search=Unsatisfactory'" class="cursor-pointer hover:shadow-md hover:scale-[1.01] hover:border-brand-500 transition-all rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-850/50 p-4 flex flex-col justify-between">
+                  <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase">Quality Failure</span>
+                    <span class="text-xs font-bold text-blue-600 bg-blue-50 dark:bg-blue-500/10 dark:text-blue-400 px-2 py-0.5 rounded-full">9%</span>
+                  </div>
+                  <div>
+                    <h4 class="text-xl font-black text-gray-800 dark:text-white" x-text="trendPeriod === '7 Days' ? 'INR 120' : trendPeriod === '30 Days' ? 'INR 400' : 'INR 1,120'">INR 120</h4>
+                    <span class="text-xs text-gray-500 dark:text-gray-400 mt-1 block">QA checks failed</span>
+                  </div>
+                  <div class="w-full bg-gray-200 dark:bg-gray-700 h-1.5 rounded-full mt-4 overflow-hidden">
+                    <div class="bg-blue-500 h-full rounded-full" style="width: 9%;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <!-- Depot List -->
-            <h3 class="text-lg font-bold text-gray-800 dark:text-white/90 mb-4">Regional Depots</h3>
+            <h3 id="regional-depots" class="text-lg font-bold text-gray-800 dark:text-white/90 mb-4">Regional Depots</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <!-- Depot Card -->
-              <div @click="selectedDepot = 'Mira Bhayander'; currentLevel = 'depot'" class="cursor-pointer group flex items-center justify-between rounded-2xl border border-gray-200 bg-white p-5 hover:border-brand-500 hover:shadow-md transition-all dark:border-gray-800 dark:bg-gray-800 dark:hover:border-brand-500">
+              <div @click="window.location.href = 'depot.html'" class="cursor-pointer group flex items-center justify-between rounded-2xl border border-gray-200 bg-white p-5 hover:border-brand-500 hover:shadow-md transition-all dark:border-gray-800 dark:bg-gray-800 dark:hover:border-brand-500">
                 <div class="flex items-center gap-4">
                   <div class="flex h-14 w-14 items-center justify-center rounded-full bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-500 group-hover:scale-110 transition-transform">
                     <i class="ph ph-buildings text-2xl"></i>
@@ -231,7 +435,7 @@
               </div>
               
               <!-- Depot Card -->
-              <div @click="selectedDepot = 'Nagpur - Depot 1'; currentLevel = 'depot'" class="cursor-pointer group flex items-center justify-between rounded-2xl border border-gray-200 bg-white p-5 hover:border-brand-500 hover:shadow-md transition-all dark:border-gray-800 dark:bg-gray-800 dark:hover:border-brand-500">
+              <div @click="window.location.href = 'depot.html'" class="cursor-pointer group flex items-center justify-between rounded-2xl border border-gray-200 bg-white p-5 hover:border-brand-500 hover:shadow-md transition-all dark:border-gray-800 dark:bg-gray-800 dark:hover:border-brand-500">
                 <div class="flex items-center gap-4">
                   <div class="flex h-14 w-14 items-center justify-center rounded-full bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-500 group-hover:scale-110 transition-transform">
                     <i class="ph ph-buildings text-2xl"></i>
@@ -247,7 +451,7 @@
               </div>
 
               <!-- Depot Card -->
-              <div @click="selectedDepot = 'Nagpur - Depot 2'; currentLevel = 'depot'" class="cursor-pointer group flex items-center justify-between rounded-2xl border border-gray-200 bg-white p-5 hover:border-brand-500 hover:shadow-md transition-all dark:border-gray-800 dark:bg-gray-800 dark:hover:border-brand-500">
+              <div @click="window.location.href = 'depot.html'" class="cursor-pointer group flex items-center justify-between rounded-2xl border border-gray-200 bg-white p-5 hover:border-brand-500 hover:shadow-md transition-all dark:border-gray-800 dark:bg-gray-800 dark:hover:border-brand-500">
                 <div class="flex items-center gap-4">
                   <div class="flex h-14 w-14 items-center justify-center rounded-full bg-warning-50 text-warning-600 dark:bg-warning-500/10 dark:text-warning-500 group-hover:scale-110 transition-transform">
                     <i class="ph ph-buildings text-2xl"></i>
@@ -348,7 +552,7 @@
                   </thead>
                   <tbody>
                     <!-- Mock Data rows -->
-                    <tr x-show="activeCategory === 'fleet' || activeCategory === 'maintenance'" @click="selectedBusId = 'Bus #821'; busDetailsModalOpen = true" class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors">
+                    <tr x-show="activeCategory === 'fleet' || activeCategory === 'maintenance' || activeCategory === 'alerts'" @click="selectedBusId = 'Bus #821'; busDetailsModalOpen = true" class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors">
                       <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">Bus #821</td>
                       <td class="px-6 py-4">ICE, Double Decker</td>
                       <td class="px-6 py-4">
@@ -398,7 +602,7 @@
                         <button class="text-brand-600 hover:text-brand-800 font-medium dark:text-brand-400">View Details</button>
                       </td>
                     </tr>
-                    <tr x-show="activeCategory === 'fleet' || activeCategory === 'cleaned'" @click="selectedBusId = 'Bus #202'; busDetailsModalOpen = true" class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors">
+                    <tr x-show="activeCategory === 'fleet' || activeCategory === 'cleaned' || activeCategory === 'alerts'" @click="selectedBusId = 'Bus #202'; busDetailsModalOpen = true" class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors">
                       <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">Bus #202</td>
                       <td class="px-6 py-4">EV, Single Decker</td>
                       <td class="px-6 py-4">
@@ -428,7 +632,7 @@
                         <button class="text-brand-600 hover:text-brand-800 font-medium dark:text-brand-400">View Details</button>
                       </td>
                     </tr>
-                    <tr x-show="activeCategory === 'fleet' || activeCategory === 'maintenance'" @click="selectedBusId = 'Bus #567'; busDetailsModalOpen = true" class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors">
+                    <tr x-show="activeCategory === 'fleet' || activeCategory === 'maintenance' || activeCategory === 'alerts'" @click="selectedBusId = 'Bus #567'; busDetailsModalOpen = true" class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors">
                       <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">Bus #567</td>
                       <td class="px-6 py-4">ICE, Single Decker</td>
                       <td class="px-6 py-4">
