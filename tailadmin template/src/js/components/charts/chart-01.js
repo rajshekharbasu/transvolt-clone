@@ -5,15 +5,19 @@ const chart01 = () => {
   const chartOneOptions = {
     series: [
       {
-        name: "Sales",
-        data: [168, 385, 201, 298, 187, 195, 291, 110, 215, 390, 280, 112],
+        name: "Expected",
+        data: [209860, 150000, 175000, 100000],
+      },
+      {
+        name: "Delivered",
+        data: [150000, 140000, 160000, 95000],
       },
     ],
-    colors: ["#465fff"],
+    colors: ["#465fff", "#10b981"],
     chart: {
       fontFamily: "Outfit, sans-serif",
       type: "bar",
-      height: 180,
+      height: 280,
       toolbar: {
         show: false,
       },
@@ -21,7 +25,7 @@ const chart01 = () => {
     plotOptions: {
       bar: {
         horizontal: false,
-        columnWidth: "39%",
+        columnWidth: "45%",
         borderRadius: 5,
         borderRadiusApplication: "end",
       },
@@ -35,20 +39,7 @@ const chart01 = () => {
       colors: ["transparent"],
     },
     xaxis: {
-      categories: [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec",
-      ],
+      categories: ["Shift A", "Shift B", "Shift C", "Shift D"],
       axisBorder: {
         show: false,
       },
@@ -61,13 +52,17 @@ const chart01 = () => {
       position: "top",
       horizontalAlign: "left",
       fontFamily: "Outfit",
-
       markers: {
         radius: 99,
       },
     },
     yaxis: {
       title: false,
+      labels: {
+        formatter: function (val) {
+          return val.toLocaleString();
+        },
+      },
     },
     grid: {
       yaxis: {
@@ -79,14 +74,13 @@ const chart01 = () => {
     fill: {
       opacity: 1,
     },
-
     tooltip: {
       x: {
-        show: false,
+        show: true,
       },
       y: {
         formatter: function (val) {
-          return val;
+          return val.toLocaleString() + " units";
         },
       },
     },
@@ -95,12 +89,30 @@ const chart01 = () => {
   const chartSelector = document.querySelectorAll("#chartOne");
 
   if (chartSelector.length) {
-    const chartFour = new ApexCharts(
+    const chartInstance = new ApexCharts(
       document.querySelector("#chartOne"),
       chartOneOptions,
     );
-    chartFour.render();
+    chartInstance.render();
+
+    // Listen for dynamic updates from Alpine.js state controller
+    window.addEventListener("update-dashboard-chart", (event) => {
+      const data = event.detail;
+      if (data && data.expected && data.delivered) {
+        chartInstance.updateSeries([
+          {
+            name: "Expected",
+            data: data.expected,
+          },
+          {
+            name: "Delivered",
+            data: data.delivered,
+          },
+        ]);
+      }
+    });
   }
 };
 
 export default chart01;
+

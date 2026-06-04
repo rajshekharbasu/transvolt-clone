@@ -25,17 +25,17 @@
       sidebarToggle: false, 
       scrollTop: false,
       finesData: [
-        { id: 'F-101', date: '2026-05-25', ref: 'Bus #402', violation: 'Quick Transit Cleaning – Missed Deadline', amount: 'INR 165', status: 'Pending' },
-        { id: 'F-102', date: '2026-05-24', ref: 'Bus #781', violation: 'Overnight Cleaning – Missed Deadline', amount: 'INR 500', status: 'Paid' },
-        { id: 'F-103', date: '2026-05-23', ref: 'Depot Maint. Pit 1', violation: 'Cleaning Standard Non-Compliance', amount: 'INR 500', status: 'Pending' },
-        { id: 'F-104', date: '2026-05-22', ref: 'Bus #112', violation: 'Passenger Cleaning Complaint', amount: 'INR 165', status: 'Pending' },
-        { id: 'F-105', date: '2026-05-21', ref: 'Service Bay 2', violation: 'Unsatisfactory Cleaning Quality', amount: 'INR 165', status: 'Paid' },
-        { id: 'F-106', date: '2026-05-20', ref: 'Washing Pit', violation: 'Missed Cleaning SCHEDULE', amount: 'INR 500', status: 'Paid' }
+        { id: 'F-101', date: '2026-05-25', ref: 'Bus #402', violation: 'Quick Transit Cleaning – Missed Deadline', type: 'Delay', reason: 'Staff Shortage', amount: 'INR 165', status: 'Pending' },
+        { id: 'F-102', date: '2026-05-24', ref: 'Bus #781', violation: 'Overnight Cleaning – Missed Deadline', type: 'Delay', reason: 'Delay in Bus Arrival', amount: 'INR 500', status: 'Paid' },
+        { id: 'F-103', date: '2026-05-23', ref: 'Depot Maint. Pit 1', violation: 'Cleaning Standard Non-Compliance', type: 'Quality', reason: 'Equipment Failure', amount: 'INR 500', status: 'Pending' },
+        { id: 'F-104', date: '2026-05-22', ref: 'Bus #112', violation: 'Passenger Cleaning Complaint', type: 'Quality', reason: 'Unsatisfactory Workmanship', amount: 'INR 165', status: 'Pending' },
+        { id: 'F-105', date: '2026-05-21', ref: 'Service Bay 2', violation: 'Unsatisfactory Cleaning Quality', type: 'Quality', reason: 'Equipment Failure', amount: 'INR 165', status: 'Paid' },
+        { id: 'F-106', date: '2026-05-20', ref: 'Washing Pit', violation: 'Missed Cleaning SCHEDULE', type: 'Missed Schedule', reason: 'Staff Shortage', amount: 'INR 500', status: 'Paid' }
       ],
       fineModalOpen: false,
       detailsModalOpen: false,
       activeFine: null,
-      newFine: { ref: '', violation: 'Missed Deadline', amount: '' },
+      newFine: { ref: '', violation: 'Missed Deadline', type: 'Delay', reason: 'Staff Shortage', amount: '' },
       viewFine(id) {
         this.activeFine = this.finesData.find(f => f.id === id);
         this.detailsModalOpen = true;
@@ -59,10 +59,12 @@
           date: date,
           ref: this.newFine.ref,
           violation: this.newFine.violation,
+          type: this.newFine.type,
+          reason: this.newFine.reason,
           amount: 'INR ' + this.newFine.amount,
           status: 'Pending'
         });
-        this.newFine = { ref: '', violation: 'Missed Deadline', amount: '' };
+        this.newFine = { ref: '', violation: 'Missed Deadline', type: 'Delay', reason: 'Staff Shortage', amount: '' };
         this.fineModalOpen = false;
       },
       get totalFinesAmount() {
@@ -168,7 +170,12 @@
             </div>
           </div>
 
-          <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 overflow-hidden" x-data="{ search: '', filterStatus: 'All' }">
+          <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 overflow-hidden" x-data="{ search: '', filterStatus: 'All', filterType: 'All', filterReason: 'All' }" x-init="
+            const params = new URLSearchParams(window.location.search);
+            if (params.has('type')) filterType = params.get('type');
+            if (params.has('reason')) filterReason = params.get('reason');
+            if (params.has('search')) search = params.get('search');
+          ">
             <!-- Table Header / Filters -->
             <div class="border-b border-gray-200 p-4 dark:border-gray-800 sm:flex sm:items-center sm:justify-between">
               <div class="relative mb-4 sm:mb-0 sm:w-64">
@@ -177,12 +184,25 @@
                 </div>
                 <input type="text" x-model="search" class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 pl-10 text-sm text-gray-900 focus:border-brand-500 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400" placeholder="Search fines or refs...">
               </div>
-              <div class="flex items-center gap-2">
-                <select x-model="filterStatus" class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-brand-500 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+              <div class="flex items-center gap-2 flex-wrap">
+                <select x-model="filterStatus" class="block rounded-lg border border-gray-300 bg-gray-50 p-2 text-sm text-gray-900 focus:border-brand-500 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white min-w-32">
                   <option value="All">All Statuses</option>
                   <option value="Pending">Pending</option>
                   <option value="Paid">Paid</option>
                   <option value="Appealed">Appealed</option>
+                </select>
+                <select x-model="filterType" class="block rounded-lg border border-gray-300 bg-gray-50 p-2 text-sm text-gray-900 focus:border-brand-500 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white min-w-32">
+                  <option value="All">All Types</option>
+                  <option value="Delay">Delay</option>
+                  <option value="Quality">Quality</option>
+                  <option value="Missed Schedule">Missed Schedule</option>
+                </select>
+                <select x-model="filterReason" class="block rounded-lg border border-gray-300 bg-gray-50 p-2 text-sm text-gray-900 focus:border-brand-500 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white min-w-32">
+                  <option value="All">All Failure Reasons</option>
+                  <option value="Staff Shortage">Staff Shortage</option>
+                  <option value="Equipment Failure">Equipment Failure</option>
+                  <option value="Delay in Bus Arrival">Delay in Bus Arrival</option>
+                  <option value="Unsatisfactory Workmanship">Unsatisfactory Workmanship</option>
                 </select>
               </div>
             </div>
@@ -195,19 +215,26 @@
                     <th class="px-6 py-4 font-bold text-gray-800 dark:text-white/90">Fine ID</th>
                     <th class="px-6 py-4 font-bold text-gray-800 dark:text-white/90">Date</th>
                     <th class="px-6 py-4 font-bold text-gray-800 dark:text-white/90">Reference</th>
-                    <th class="px-6 py-4 font-bold text-gray-800 dark:text-white/90">Violation</th>
+                    <th class="px-6 py-4 font-bold text-gray-800 dark:text-white/90">Violation & Type</th>
+                    <th class="px-6 py-4 font-bold text-gray-800 dark:text-white/90">Failure Reason</th>
                     <th class="px-6 py-4 font-bold text-gray-800 dark:text-white/90">Amount</th>
                     <th class="px-6 py-4 font-bold text-gray-800 dark:text-white/90">Status</th>
                     <th class="px-6 py-4 font-bold text-right text-gray-800 dark:text-white/90">Actions</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                  <template x-for="fine in finesData.filter(f => (filterStatus === 'All' || f.status === filterStatus) && (search === '' || f.id.toLowerCase().includes(search.toLowerCase()) || f.ref.toLowerCase().includes(search.toLowerCase())))" :key="fine.id">
+                  <template x-for="fine in finesData.filter(f => (filterStatus === 'All' || f.status === filterStatus) && (filterType === 'All' || f.type === filterType) && (filterReason === 'All' || f.reason === filterReason) && (search === '' || f.id.toLowerCase().includes(search.toLowerCase()) || f.ref.toLowerCase().includes(search.toLowerCase()) || f.violation.toLowerCase().includes(search.toLowerCase())))" :key="fine.id">
                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                       <td class="px-6 py-4 text-sm font-black text-gray-900 dark:text-white" x-text="fine.id"></td>
                       <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400" x-text="fine.date"></td>
                       <td class="px-6 py-4 text-sm font-bold text-brand-500" x-text="fine.ref"></td>
-                      <td class="px-6 py-4 text-sm text-gray-800 dark:text-gray-300" x-text="fine.violation"></td>
+                      <td class="px-6 py-4">
+                        <div class="text-sm font-medium text-gray-800 dark:text-gray-300" x-text="fine.violation"></div>
+                        <span class="inline-flex items-center rounded-md bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 text-xs font-semibold text-blue-700 dark:text-blue-400 ring-1 ring-inset ring-blue-700/10 dark:ring-blue-400/20 mt-1" x-text="fine.type"></span>
+                      </td>
+                      <td class="px-6 py-4">
+                        <span class="inline-flex items-center rounded-md bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:text-amber-400 ring-1 ring-inset ring-amber-600/10 dark:ring-amber-400/20" x-text="fine.reason"></span>
+                      </td>
                       <td class="px-6 py-4 text-sm font-bold text-error-600 dark:text-error-500" x-text="fine.amount"></td>
                       <td class="px-6 py-4">
                         <span class="rounded px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider border"
@@ -233,8 +260,8 @@
                   </template>
                   
                   <!-- Empty State -->
-                  <tr x-show="finesData.filter(f => (filterStatus === 'All' || f.status === filterStatus) && (search === '' || f.id.toLowerCase().includes(search.toLowerCase()) || f.ref.toLowerCase().includes(search.toLowerCase()))).length === 0" style="display: none;">
-                    <td colspan="7" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                  <tr x-show="finesData.filter(f => (filterStatus === 'All' || f.status === filterStatus) && (filterType === 'All' || f.type === filterType) && (filterReason === 'All' || f.reason === filterReason) && (search === '' || f.id.toLowerCase().includes(search.toLowerCase()) || f.ref.toLowerCase().includes(search.toLowerCase()) || f.violation.toLowerCase().includes(search.toLowerCase()))).length === 0" style="display: none;">
+                    <td colspan="8" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
                       <div class="flex flex-col items-center justify-center gap-2">
                         <i class="ph ph-receipt text-4xl text-gray-300 dark:text-gray-600"></i>
                         <p class="text-sm font-medium">No fines found matching your filters.</p>
@@ -293,12 +320,24 @@
           <input type="text" x-model="newFine.ref" class="w-full rounded-xl border border-gray-300 bg-transparent px-5 py-3 text-sm outline-hidden focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:text-white" placeholder="Enter vehicle or location ID">
         </div>
         <div>
+          <label class="mb-2 block text-sm font-bold text-gray-700 dark:text-gray-300">Violation Category</label>
+          <input type="text" x-model="newFine.violation" class="w-full rounded-xl border border-gray-300 bg-transparent px-5 py-3 text-sm outline-hidden focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:text-white" placeholder="Quick Transit Cleaning – Missed Deadline">
+        </div>
+        <div>
           <label class="mb-2 block text-sm font-bold text-gray-700 dark:text-gray-300">Violation Type</label>
-          <select x-model="newFine.violation" class="w-full rounded-xl border border-gray-300 bg-transparent px-5 py-3 text-sm outline-hidden focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:text-white">
-            <option>Missed Deadline</option>
-            <option>Cleaning Standard Non-Compliance</option>
-            <option>Passenger Cleaning Complaint</option>
-            <option>Unsatisfactory Cleaning Quality</option>
+          <select x-model="newFine.type" class="w-full rounded-xl border border-gray-300 bg-transparent px-5 py-3 text-sm outline-hidden focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:text-white">
+            <option value="Delay">Delay</option>
+            <option value="Quality">Quality</option>
+            <option value="Missed Schedule">Missed Schedule</option>
+          </select>
+        </div>
+        <div>
+          <label class="mb-2 block text-sm font-bold text-gray-700 dark:text-gray-300">Failure Reason</label>
+          <select x-model="newFine.reason" class="w-full rounded-xl border border-gray-300 bg-transparent px-5 py-3 text-sm outline-hidden focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:text-white">
+            <option value="Staff Shortage">Staff Shortage</option>
+            <option value="Equipment Failure">Equipment Failure</option>
+            <option value="Delay in Bus Arrival">Delay in Bus Arrival</option>
+            <option value="Unsatisfactory Workmanship">Unsatisfactory Workmanship</option>
           </select>
         </div>
         <div>
@@ -341,6 +380,14 @@
             <div class="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-4">
               <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Reference</span>
               <span class="text-sm font-bold text-gray-900 dark:text-white" x-text="activeFine.ref"></span>
+            </div>
+            <div class="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-4">
+              <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Violation Type</span>
+              <span class="text-sm font-bold text-gray-900 dark:text-white" x-text="activeFine.type"></span>
+            </div>
+            <div class="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-4">
+              <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Failure Reason</span>
+              <span class="text-sm font-bold text-gray-900 dark:text-white" x-text="activeFine.reason"></span>
             </div>
             <div class="flex flex-col border-b border-gray-200 dark:border-gray-700 pb-4 gap-1">
               <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Violation Details</span>
