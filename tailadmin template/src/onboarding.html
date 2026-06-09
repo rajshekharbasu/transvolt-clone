@@ -1,0 +1,1135 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
+    />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Onboarding | TransVolt</title>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  </head>
+  <body
+    x-data="{ page: 'onboarding', 'loaded': true, 'darkMode': false, 'stickyMenu': false, 'sidebarToggle': false, 'scrollTop': false }"
+    x-init="
+         darkMode = JSON.parse(localStorage.getItem('darkMode'));
+         $watch('darkMode', value => localStorage.setItem('darkMode', JSON.stringify(value)))"
+    :class="{'dark bg-gray-900': darkMode === true}"
+  >
+    <!-- ===== Preloader Start ===== -->
+    <include src="./partials/preloader.html"></include>
+    <!-- ===== Preloader End ===== -->
+
+    <!-- ===== Page Wrapper Start ===== -->
+    <div class="flex h-screen overflow-hidden">
+      <!-- ===== Sidebar Start ===== -->
+      <include src="./partials/sidebar.html"></include>
+      <!-- ===== Sidebar End ===== -->
+
+      <!-- ===== Content Area Start ===== -->
+      <div
+        class="relative flex flex-col flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900"
+      >
+        <!-- Small Device Overlay Start -->
+        <include src="./partials/overlay.html" />
+        <!-- Small Device Overlay End -->
+
+        <!-- ===== Header Start ===== -->
+        <include src="./partials/header.html" />
+        <!-- ===== Header End ===== -->
+
+        <!-- ===== Main Content Start ===== -->
+        <main x-data="onboardingApp()" x-init="initApp()">
+          <div class="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6 flex flex-col gap-6">
+            
+            <!-- Breadcrumbs / Title -->
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 class="text-title-md2 font-bold text-gray-800 dark:text-white/90">Onboarding Management</h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Configure organizations, companies, projects, and sites.</p>
+              </div>
+            </div>
+
+            <!-- Stats Counters Row -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <!-- Organisations -->
+              <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-white/[0.03] flex items-center justify-between">
+                <div>
+                  <span class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Organisations</span>
+                  <div class="flex items-baseline gap-2 mt-1.5">
+                    <span class="text-2xl font-bold text-gray-800 dark:text-white/90" x-text="counts.organisations.total">0</span>
+                    <span class="text-xs text-success-600 dark:text-success-400 font-bold" x-text="counts.organisations.active + ' Active'"></span>
+                  </div>
+                </div>
+                <div class="w-11 h-11 rounded-xl bg-brand-500/10 dark:bg-brand-500/10 flex items-center justify-center text-brand-600 dark:text-brand-400 shrink-0">
+                  <i class="ph ph-buildings text-xl"></i>
+                </div>
+              </div>
+              <!-- Companies -->
+              <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-white/[0.03] flex items-center justify-between">
+                <div>
+                  <span class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Companies</span>
+                  <div class="flex items-baseline gap-2 mt-1.5">
+                    <span class="text-2xl font-bold text-gray-800 dark:text-white/90" x-text="counts.companies.total">0</span>
+                    <span class="text-xs text-success-600 dark:text-success-400 font-bold" x-text="counts.companies.active + ' Active'"></span>
+                  </div>
+                </div>
+                <div class="w-11 h-11 rounded-xl bg-success-500/10 dark:bg-success-500/10 flex items-center justify-center text-success-600 dark:text-success-400 shrink-0">
+                  <i class="ph ph-briefcase text-xl"></i>
+                </div>
+              </div>
+              <!-- Projects -->
+              <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-white/[0.03] flex items-center justify-between">
+                <div>
+                  <span class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Projects</span>
+                  <div class="flex items-baseline gap-2 mt-1.5">
+                    <span class="text-2xl font-bold text-gray-800 dark:text-white/90" x-text="counts.projects.total">0</span>
+                    <span class="text-xs text-success-600 dark:text-success-400 font-bold" x-text="counts.projects.active + ' Active'"></span>
+                  </div>
+                </div>
+                <div class="w-11 h-11 rounded-xl bg-warning-500/10 dark:bg-warning-500/10 flex items-center justify-center text-warning-600 dark:text-warning-400 shrink-0">
+                  <i class="ph ph-folder text-xl"></i>
+                </div>
+              </div>
+              <!-- Sites -->
+              <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-white/[0.03] flex items-center justify-between">
+                <div>
+                  <span class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Sites</span>
+                  <div class="flex items-baseline gap-2 mt-1.5">
+                    <span class="text-2xl font-bold text-gray-800 dark:text-white/90" x-text="counts.sites.total">0</span>
+                    <span class="text-xs text-success-600 dark:text-success-400 font-bold" x-text="counts.sites.active + ' Active'"></span>
+                  </div>
+                </div>
+                <div class="w-11 h-11 rounded-xl bg-error-500/10 dark:bg-error-500/10 flex items-center justify-center text-error-600 dark:text-error-400 shrink-0">
+                  <i class="ph ph-map-pin-line text-xl"></i>
+                </div>
+              </div>
+            </div>
+
+            <!-- Toast Notifications -->
+            <div class="fixed top-5 right-5 z-[9999] flex flex-col gap-2">
+              <template x-if="successMessage">
+                <div class="flex items-center gap-3 bg-success-600 text-white px-4 py-3 rounded-xl shadow-lg animate-fade-in-right">
+                  <i class="ph ph-check-circle text-lg"></i>
+                  <span class="text-sm font-semibold" x-text="successMessage"></span>
+                </div>
+              </template>
+              <template x-if="errorMessage">
+                <div class="flex items-center gap-3 bg-error-600 text-white px-4 py-3 rounded-xl shadow-lg animate-fade-in-right">
+                  <i class="ph ph-warning-circle text-lg"></i>
+                  <span class="text-sm font-semibold" x-text="errorMessage"></span>
+                </div>
+              </template>
+            </div>
+
+            <!-- Main Layout Split -->
+            <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+              
+              <!-- Left Tabbed CRUD Panel -->
+              <div class="xl:col-span-8 flex flex-col gap-4">
+                
+                <!-- Tabs Selector -->
+                <div class="flex border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] p-1.5 rounded-xl border">
+                  <button
+                    @click="setTab('organizations')"
+                    class="flex-1 py-2.5 rounded-lg text-sm font-bold transition-all"
+                    :class="activeTab === 'organizations' ? 'bg-brand-500 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'"
+                  >
+                    Organizations
+                  </button>
+                  <button
+                    @click="setTab('companies')"
+                    class="flex-1 py-2.5 rounded-lg text-sm font-bold transition-all"
+                    :class="activeTab === 'companies' ? 'bg-brand-500 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'"
+                  >
+                    Companies
+                  </button>
+                  <button
+                    @click="setTab('projects')"
+                    class="flex-1 py-2.5 rounded-lg text-sm font-bold transition-all"
+                    :class="activeTab === 'projects' ? 'bg-brand-500 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'"
+                  >
+                    Projects
+                  </button>
+                  <button
+                    @click="setTab('sites')"
+                    class="flex-1 py-2.5 rounded-lg text-sm font-bold transition-all"
+                    :class="activeTab === 'sites' ? 'bg-brand-500 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'"
+                  >
+                    Sites
+                  </button>
+                </div>
+
+                <!-- Table Container Card -->
+                <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] flex flex-col gap-4">
+                  
+                  <!-- Filter bar -->
+                  <div class="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
+                    
+                    <!-- Search Input -->
+                    <div class="relative flex-1 max-w-xs">
+                      <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                        <i class="ph ph-magnifying-glass text-lg"></i>
+                      </span>
+                      <input
+                        type="text"
+                        placeholder="Search..."
+                        x-model="searchQuery"
+                        class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10 bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 outline-none"
+                      />
+                    </div>
+
+                    <!-- Hierarchy selectors depending on active tab -->
+                    <div class="flex items-center gap-2 flex-wrap">
+                      
+                      <!-- Org Select for Companies, Projects, Sites -->
+                      <template x-if="activeTab !== 'organizations'">
+                        <select
+                          x-model="selectedOrgId"
+                          @change="handleOrgChange()"
+                          class="border border-gray-300 dark:border-gray-700 rounded-lg text-sm px-3 py-2 bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 outline-none cursor-pointer"
+                        >
+                          <option value="">Select Organization...</option>
+                          <template x-for="org in organisations" :key="org.id">
+                            <option :value="org.id" x-text="org.name"></option>
+                          </template>
+                        </select>
+                      </template>
+
+                      <!-- Company Select for Projects, Sites -->
+                      <template x-if="activeTab === 'projects' || activeTab === 'sites'">
+                        <select
+                          x-model="selectedCompanyId"
+                          @change="handleCompanyChange()"
+                          class="border border-gray-300 dark:border-gray-700 rounded-lg text-sm px-3 py-2 bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 outline-none cursor-pointer"
+                          :disabled="!selectedOrgId"
+                        >
+                          <option value="">Select Company...</option>
+                          <template x-for="comp in filteredCompaniesDropdown" :key="comp.id">
+                            <option :value="comp.id" x-text="comp.name"></option>
+                          </template>
+                        </select>
+                      </template>
+
+                      <!-- Project Select for Sites -->
+                      <template x-if="activeTab === 'sites'">
+                        <select
+                          x-model="selectedProjectId"
+                          @change="handleProjectChange()"
+                          class="border border-gray-300 dark:border-gray-700 rounded-lg text-sm px-3 py-2 bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 outline-none cursor-pointer"
+                          :disabled="!selectedCompanyId"
+                        >
+                          <option value="">Select Project...</option>
+                          <template x-for="proj in filteredProjectsDropdown" :key="proj.id">
+                            <option :value="proj.id" x-text="proj.name"></option>
+                          </template>
+                        </select>
+                      </template>
+
+                      <!-- Add Button -->
+                      <button
+                        type="button"
+                        @click="openAddModal()"
+                        class="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-1.5 shadow-sm"
+                      >
+                        <i class="ph ph-plus-circle text-lg"></i>
+                        Add New
+                      </button>
+
+                    </div>
+                  </div>
+
+                  <!-- Loader -->
+                  <div x-show="loading" class="flex flex-col items-center justify-center py-12 gap-2 text-gray-400">
+                    <div class="w-8 h-8 rounded-full border-4 border-brand-500/25 border-t-brand-500 animate-spin"></div>
+                    <span class="text-sm font-medium">Fetching details...</span>
+                  </div>
+
+                  <!-- Tables Section -->
+                  <div x-show="!loading" class="overflow-x-auto">
+                    
+                    <!-- 1. Organisations Table -->
+                    <template x-if="activeTab === 'organizations'">
+                      <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                          <tr class="border-b border-gray-100 dark:border-gray-800 text-gray-400 text-xs font-semibold uppercase">
+                            <th class="py-3 px-4">Name</th>
+                            <th class="py-3 px-4">ID</th>
+                            <th class="py-3 px-4">Status</th>
+                            <th class="py-3 px-4 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <template x-for="org in filteredOrganisations" :key="org.id">
+                            <tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/20 text-gray-700 dark:text-gray-300">
+                              <td class="py-3.5 px-4 font-bold text-gray-900 dark:text-white" x-text="org.name"></td>
+                              <td class="py-3.5 px-4 text-xs font-mono text-gray-400" x-text="org.id"></td>
+                              <td class="py-3.5 px-4">
+                                <span
+                                  class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                                  :class="org.is_active ? 'bg-success-50 text-success-600 dark:bg-success-500/10 dark:text-success-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'"
+                                  x-text="org.is_active ? 'Active' : 'Inactive'"
+                                ></span>
+                              </td>
+                              <td class="py-3.5 px-4 text-right">
+                                <div class="inline-flex items-center gap-1">
+                                  <button @click="openEditModal(org)" class="p-1.5 text-gray-400 hover:text-brand-500 dark:hover:text-brand-400 transition-colors" title="Edit">
+                                    <i class="ph ph-pencil-simple text-lg"></i>
+                                  </button>
+                                  <button @click="deleteEntityConfirm(org.id)" class="p-1.5 text-gray-400 hover:text-error-500 transition-colors" title="Delete">
+                                    <i class="ph ph-trash text-lg"></i>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          </template>
+                          <tr x-show="filteredOrganisations.length === 0">
+                            <td colspan="4" class="py-12 text-center text-gray-400">No organizations found.</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </template>
+
+                    <!-- 2. Companies Table -->
+                    <template x-if="activeTab === 'companies'">
+                      <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                          <tr class="border-b border-gray-100 dark:border-gray-800 text-gray-400 text-xs font-semibold uppercase">
+                            <th class="py-3 px-4">Company Name</th>
+                            <th class="py-3 px-4">ID</th>
+                            <th class="py-3 px-4">Status</th>
+                            <th class="py-3 px-4 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <template x-for="comp in filteredCompanies" :key="comp.id">
+                            <tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/20 text-gray-700 dark:text-gray-300">
+                              <td class="py-3.5 px-4 font-bold text-gray-900 dark:text-white" x-text="comp.name"></td>
+                              <td class="py-3.5 px-4 text-xs font-mono text-gray-400" x-text="comp.id"></td>
+                              <td class="py-3.5 px-4">
+                                <span
+                                  class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                                  :class="comp.is_active ? 'bg-success-50 text-success-600 dark:bg-success-500/10 dark:text-success-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'"
+                                  x-text="comp.is_active ? 'Active' : 'Inactive'"
+                                ></span>
+                              </td>
+                              <td class="py-3.5 px-4 text-right">
+                                <div class="inline-flex items-center gap-1">
+                                  <button @click="openEditModal(comp)" class="p-1.5 text-gray-400 hover:text-brand-500 dark:hover:text-brand-400 transition-colors" title="Edit">
+                                    <i class="ph ph-pencil-simple text-lg"></i>
+                                  </button>
+                                  <button @click="deleteEntityConfirm(comp.id)" class="p-1.5 text-gray-400 hover:text-error-500 transition-colors" title="Delete">
+                                    <i class="ph ph-trash text-lg"></i>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          </template>
+                          <tr x-show="filteredCompanies.length === 0">
+                            <td colspan="4" class="py-12 text-center text-gray-400">
+                              <span x-text="selectedOrgId ? 'No companies found for this organization.' : 'Select an organization above to view companies.'"></span>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </template>
+
+                    <!-- 3. Projects Table -->
+                    <template x-if="activeTab === 'projects'">
+                      <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                          <tr class="border-b border-gray-100 dark:border-gray-800 text-gray-400 text-xs font-semibold uppercase">
+                            <th class="py-3 px-4">Project Name</th>
+                            <th class="py-3 px-4">ID</th>
+                            <th class="py-3 px-4">Status</th>
+                            <th class="py-3 px-4 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <template x-for="proj in filteredProjects" :key="proj.id">
+                            <tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/20 text-gray-700 dark:text-gray-300">
+                              <td class="py-3.5 px-4 font-bold text-gray-900 dark:text-white" x-text="proj.name"></td>
+                              <td class="py-3.5 px-4 text-xs font-mono text-gray-400" x-text="proj.id"></td>
+                              <td class="py-3.5 px-4">
+                                <span
+                                  class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                                  :class="proj.is_active ? 'bg-success-50 text-success-600 dark:bg-success-500/10 dark:text-success-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'"
+                                  x-text="proj.is_active ? 'Active' : 'Inactive'"
+                                ></span>
+                              </td>
+                              <td class="py-3.5 px-4 text-right">
+                                <div class="inline-flex items-center gap-1">
+                                  <button @click="openEditModal(proj)" class="p-1.5 text-gray-400 hover:text-brand-500 dark:hover:text-brand-400 transition-colors" title="Edit">
+                                    <i class="ph ph-pencil-simple text-lg"></i>
+                                  </button>
+                                  <button @click="deleteEntityConfirm(proj.id)" class="p-1.5 text-gray-400 hover:text-error-500 transition-colors" title="Delete">
+                                    <i class="ph ph-trash text-lg"></i>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          </template>
+                          <tr x-show="filteredProjects.length === 0">
+                            <td colspan="4" class="py-12 text-center text-gray-400">
+                              <span x-text="selectedCompanyId ? 'No projects found for this company.' : 'Select an organization and company above to view projects.'"></span>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </template>
+
+                    <!-- 4. Sites Table -->
+                    <template x-if="activeTab === 'sites'">
+                      <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                          <tr class="border-b border-gray-100 dark:border-gray-800 text-gray-400 text-xs font-semibold uppercase">
+                            <th class="py-3 px-4">Site Name</th>
+                            <th class="py-3 px-4">Code</th>
+                            <th class="py-3 px-4">Location</th>
+                            <th class="py-3 px-4">Status</th>
+                            <th class="py-3 px-4 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <template x-for="site in filteredSites" :key="site.id">
+                            <tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/20 text-gray-700 dark:text-gray-300">
+                              <td class="py-3.5 px-4 font-bold text-gray-900 dark:text-white" x-text="site.name"></td>
+                              <td class="py-3.5 px-4 text-xs font-mono text-gray-400" x-text="site.code || 'N/A'"></td>
+                              <td class="py-3.5 px-4 text-gray-500 dark:text-gray-400" x-text="site.location || 'N/A'"></td>
+                              <td class="py-3.5 px-4">
+                                <span
+                                  class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                                  :class="site.is_active ? 'bg-success-50 text-success-600 dark:bg-success-500/10 dark:text-success-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'"
+                                  x-text="site.is_active ? 'Active' : 'Inactive'"
+                                ></span>
+                              </td>
+                              <td class="py-3.5 px-4 text-right">
+                                <div class="inline-flex items-center gap-1">
+                                  <button @click="openEditModal(site)" class="p-1.5 text-gray-400 hover:text-brand-500 dark:hover:text-brand-400 transition-colors" title="Edit">
+                                    <i class="ph ph-pencil-simple text-lg"></i>
+                                  </button>
+                                  <button @click="deleteEntityConfirm(site.id)" class="p-1.5 text-gray-400 hover:text-error-500 transition-colors" title="Delete">
+                                    <i class="ph ph-trash text-lg"></i>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          </template>
+                          <tr x-show="filteredSites.length === 0">
+                            <td colspan="5" class="py-12 text-center text-gray-400">
+                              <span x-text="selectedProjectId ? 'No sites found for this project.' : 'Select an organization, company, and project above to view sites.'"></span>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </template>
+
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Right Recent Activities Panel -->
+              <div class="xl:col-span-4 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] flex flex-col gap-4">
+                <div class="flex items-center gap-2 pb-3 border-b border-gray-100 dark:border-gray-800">
+                  <i class="ph ph-clock-counter-clockwise text-xl text-brand-500"></i>
+                  <h3 class="text-sm font-semibold text-gray-800 dark:text-white/90">Recent Activities</h3>
+                </div>
+
+                <!-- Activities Timeline -->
+                <div class="flex flex-col gap-4 overflow-y-auto max-h-[500px] pr-2 custom-scrollbar">
+                  <template x-for="act in recentActivities" :key="act.entity_id + '-' + act.timestamp">
+                    <div class="flex gap-3 relative pb-2 border-l border-gray-100 dark:border-gray-800 pl-4 last:border-l-0">
+                      <!-- Timeline Node Icon -->
+                      <span class="absolute -left-3 top-1 w-6 h-6 rounded-full flex items-center justify-center text-xs shadow-sm font-bold border-2 border-white dark:border-gray-900"
+                        :class="{
+                          'bg-success-500 text-white': act.action === 'created',
+                          'bg-warning-500 text-white': act.action === 'updated',
+                          'bg-error-500 text-white': act.action === 'deleted'
+                        }"
+                      >
+                        <template x-if="act.action === 'created'"><i class="ph ph-plus"></i></template>
+                        <template x-if="act.action === 'updated'"><i class="ph ph-pencil"></i></template>
+                        <template x-if="act.action === 'deleted'"><i class="ph ph-trash"></i></template>
+                      </span>
+
+                      <!-- Activity Info Card -->
+                      <div class="flex-1 flex flex-col gap-0.5">
+                        <div class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5 flex-wrap">
+                          <span class="font-bold text-gray-700 dark:text-white/80" x-text="act.user_name || 'System Admin'"></span>
+                          <span class="text-[10px] uppercase font-black bg-gray-100 dark:bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded" x-text="act.user_role || 'admin'"></span>
+                        </div>
+                        <span class="text-sm text-gray-800 dark:text-white/90">
+                          <span class="capitalize font-semibold" x-text="act.action"></span>
+                          <span class="font-bold text-brand-600 dark:text-brand-400" x-text="act.name"></span>
+                          <span class="text-xs text-gray-400 capitalize" x-text="'(' + act.entity_type + ')'"></span>
+                        </span>
+                        <span class="text-[10px] text-gray-400" x-text="formatTime(act.timestamp)"></span>
+                      </div>
+                    </div>
+                  </template>
+                  <div x-show="recentActivities.length === 0" class="text-center py-12 text-gray-400 text-sm">
+                    No recent activities recorded.
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
+          <!-- CRUD Modals Area -->
+          
+          <!-- 1. Add / Edit Modal -->
+          <div
+            x-show="showModal"
+            class="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+            style="display: none;"
+          >
+            <div
+              @click.outside="showModal = false"
+              class="w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-gray-800 dark:bg-gray-900 flex flex-col gap-4 animate-scale-up"
+            >
+              <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800">
+                <h3 class="text-lg font-bold text-gray-800 dark:text-white/90">
+                  <span x-text="isEditMode ? 'Edit ' : 'Add New '"></span>
+                  <span class="capitalize" x-text="activeTab.slice(0, -1)"></span>
+                </h3>
+                <button @click="showModal = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors">
+                  <i class="ph ph-x text-xl"></i>
+                </button>
+              </div>
+
+              <!-- Form Body -->
+              <form @submit.prevent="saveEntity()" class="flex flex-col gap-4">
+                
+                <!-- Entity Name -->
+                <div class="flex flex-col gap-1">
+                  <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Name</label>
+                  <input
+                    type="text"
+                    required
+                    x-model="formData.name"
+                    placeholder="Enter name..."
+                    class="w-full px-3.5 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10"
+                  />
+                </div>
+
+                <!-- Site Specific Code -->
+                <template x-if="activeTab === 'sites'">
+                  <div class="flex flex-col gap-1">
+                    <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Code</label>
+                    <input
+                      type="text"
+                      required
+                      x-model="formData.code"
+                      placeholder="Enter site code..."
+                      class="w-full px-3.5 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10"
+                    />
+                  </div>
+                </template>
+
+                <!-- Site Specific Location -->
+                <template x-if="activeTab === 'sites'">
+                  <div class="flex flex-col gap-1">
+                    <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Location</label>
+                    <input
+                      type="text"
+                      x-model="formData.location"
+                      placeholder="Enter location..."
+                      class="w-full px-3.5 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10"
+                    />
+                  </div>
+                </template>
+
+                <!-- Toggle active status -->
+                <div class="flex items-center justify-between py-2 border-t border-b border-gray-100 dark:border-gray-800">
+                  <div class="flex flex-col">
+                    <span class="text-sm font-semibold text-gray-800 dark:text-white/90">Active Status</span>
+                    <span class="text-xs text-gray-400">Determine if this entity is active in the system.</span>
+                  </div>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" x-model="formData.is_active" class="sr-only peer" />
+                    <div class="w-11 h-6 bg-gray-200 dark:bg-gray-800 rounded-full peer peer-focus:ring-2 peer-focus:ring-brand-500/25 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-500"></div>
+                  </label>
+                </div>
+
+                <!-- Footer buttons -->
+                <div class="flex items-center justify-end gap-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+                  <button
+                    type="button"
+                    @click="showModal = false"
+                    class="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    class="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm flex items-center gap-1.5"
+                  >
+                    <i class="ph ph-floppy-disk text-lg"></i>
+                    Save Entity
+                  </button>
+                </div>
+
+              </form>
+            </div>
+          </div>
+
+        </main>
+        <!-- ===== Main Content End ===== -->
+      </div>
+      <!-- ===== Content Area End ===== -->
+    </div>
+    <!-- ===== Page Wrapper End ===== -->
+
+    <!-- Alpine JS Onboarding Tab Component Logic -->
+    <script>
+      function onboardingApp() {
+        return {
+          activeTab: 'organizations',
+          searchQuery: '',
+          selectedOrgId: '',
+          selectedCompanyId: '',
+          selectedProjectId: '',
+          loading: false,
+          showModal: false,
+          isEditMode: false,
+          successMessage: null,
+          errorMessage: null,
+          formData: {
+            id: null,
+            name: '',
+            code: '',
+            location: '',
+            is_active: true
+          },
+          counts: {
+            organisations: { total: 3, active: 3 },
+            companies: { total: 3, active: 3 },
+            projects: { total: 3, active: 3 },
+            sites: { total: 5, active: 4 }
+          },
+          recentActivities: [],
+          organisations: [
+            { id: "6d3d238e-82dc-4bd9-bd37-cb42a2385b3a", name: "MBMT Transport", is_active: true },
+            { id: "8dd16df6-d934-40f8-b5fe-49ce8028d7f1", name: "Nagpur Smart City", is_active: true },
+            { id: "db666b24-578d-4f4f-8ec3-59a306a87050", name: "Incharge Logistics", is_active: true }
+          ],
+          companies: [
+            { id: "comp-1", name: "Mira Bhayandar Municipal Corporation", organisation_id: "6d3d238e-82dc-4bd9-bd37-cb42a2385b3a", is_active: true },
+            { id: "comp-2", name: "Nagpur Mahanagar Parivahan Ltd", organisation_id: "8dd16df6-d934-40f8-b5fe-49ce8028d7f1", is_active: true },
+            { id: "comp-3", name: "Incharge Charging Solutions", organisation_id: "db666b24-578d-4f4f-8ec3-59a306a87050", is_active: true }
+          ],
+          projects: [
+            { id: "proj-1", name: "MBMT Electric Bus Project", company_id: "comp-1", is_active: true },
+            { id: "proj-2", name: "Nagpur Smart Transport Phase 1", company_id: "comp-2", is_active: true },
+            { id: "proj-3", name: "Incharge Charging Network", company_id: "comp-3", is_active: true }
+          ],
+          sites: [
+            { id: "e56d3782-6c9c-4c03-87e6-9dfe64ee8140", name: "Ghodbandar1", code: "GHB1", location: "Mira-Bhayandar", project_id: "proj-1", is_active: true },
+            { id: "f4d5ec01-dd49-4696-9e7a-dbf911765147", name: "Ghodbandar", code: "GHB", location: "Mira-Bhayandar", project_id: "proj-1", is_active: true },
+            { id: "9e3d2fdf-53f5-472e-8afd-7f59a6fe9af9", name: "Test Site 1", code: "SITE-001", location: "Nagpur", project_id: "proj-2", is_active: true },
+            { id: "d0538eea-5226-43d6-ad4b-f3efd18cbd71", name: "Test Site 2", code: "SITE-002", location: "Nagpur", project_id: "proj-2", is_active: true },
+            { id: "cc717e45-0f02-49e7-813a-3602ac960c12", name: "Test Site 3", code: "site4444", location: "Mumbai Depot", project_id: "proj-3", is_active: true }
+          ],
+
+          // Getters for dropdown selectors
+          get filteredCompaniesDropdown() {
+            return this.companies.filter(c => c.organisation_id === this.selectedOrgId);
+          },
+
+          get filteredProjectsDropdown() {
+            return this.projects.filter(p => p.company_id === this.selectedCompanyId);
+          },
+
+          // Getters for table lists (incorporating Search and Hierarchical dropdowns)
+          get filteredOrganisations() {
+            return this.organisations.filter(org => {
+              return org.name.toLowerCase().includes(this.searchQuery.toLowerCase());
+            });
+          },
+
+          get filteredCompanies() {
+            return this.companies.filter(c => {
+              const matchesOrg = !this.selectedOrgId || c.organisation_id === this.selectedOrgId;
+              const matchesSearch = c.name.toLowerCase().includes(this.searchQuery.toLowerCase());
+              return matchesOrg && matchesSearch;
+            });
+          },
+
+          get filteredProjects() {
+            return this.projects.filter(p => {
+              const matchesCompany = !this.selectedCompanyId || p.company_id === this.selectedCompanyId;
+              const matchesSearch = p.name.toLowerCase().includes(this.searchQuery.toLowerCase());
+              return matchesCompany && matchesSearch;
+            });
+          },
+
+          get filteredSites() {
+            return this.sites.filter(s => {
+              const matchesProject = !this.selectedProjectId || s.project_id === this.selectedProjectId;
+              const matchesSearch = s.name.toLowerCase().includes(this.searchQuery.toLowerCase()) || 
+                                    (s.code && s.code.toLowerCase().includes(this.searchQuery.toLowerCase()));
+              return matchesProject && matchesSearch;
+            });
+          },
+
+          setTab(tab) {
+            this.activeTab = tab;
+            this.searchQuery = '';
+          },
+
+          handleOrgChange() {
+            this.selectedCompanyId = '';
+            this.selectedProjectId = '';
+            if (this.selectedOrgId) {
+              this.fetchCompanies(this.selectedOrgId);
+            }
+          },
+
+          handleCompanyChange() {
+            this.selectedProjectId = '';
+            if (this.selectedCompanyId) {
+              this.fetchProjects(this.selectedCompanyId);
+            }
+          },
+
+          handleProjectChange() {
+            if (this.selectedProjectId) {
+              this.fetchSites(this.selectedProjectId);
+            }
+          },
+
+          showNotification(msg, type = 'success') {
+            if (type === 'success') {
+              this.successMessage = msg;
+              setTimeout(() => this.successMessage = null, 3000);
+            } else {
+              this.errorMessage = msg;
+              setTimeout(() => this.errorMessage = null, 3000);
+            }
+          },
+
+          initApp() {
+            this.fetchCounts();
+            this.fetchActivities();
+            this.fetchOrganisations();
+          },
+
+          // Format ISO timestamp nicely
+          formatTime(isoString) {
+            if (!isoString) return '';
+            try {
+              const date = new Date(isoString);
+              return date.toLocaleString();
+            } catch (err) {
+              return isoString;
+            }
+          },
+
+          // Get Bearer Token
+          getToken() {
+            const auth = sessionStorage.getItem("AuthToken");
+            return auth ? JSON.parse(auth).token : null;
+          },
+
+          // API Fetch calls
+          async fetchCounts() {
+            const token = this.getToken();
+            if (!token) return;
+
+            try {
+              const res = await fetch("https://dev-siteops-platform.transvolt.org/api/v1/onboarding/counts", {
+                headers: { "Authorization": `Bearer ${token}` }
+              });
+              if (res.ok) {
+                const data = await res.json();
+                if (data && data.data) {
+                  this.counts = data.data;
+                }
+              }
+            } catch (err) {
+              console.error("Failed fetching counts:", err);
+            }
+          },
+
+          async fetchActivities() {
+            const token = this.getToken();
+            if (!token) return;
+
+            try {
+              const res = await fetch("https://dev-siteops-platform.transvolt.org/api/v1/onboarding/recent-activities", {
+                headers: { "Authorization": `Bearer ${token}` }
+              });
+              if (res.ok) {
+                const data = await res.json();
+                if (data && data.data) {
+                  this.recentActivities = data.data;
+                }
+              }
+            } catch (err) {
+              console.error("Failed fetching activities:", err);
+            }
+          },
+
+          async fetchOrganisations() {
+            const token = this.getToken();
+            this.loading = true;
+            try {
+              const url = "https://dev-siteops-platform.transvolt.org/api/v1/onboarding/?page=1&page_size=20&is_active=all";
+              const headers = token ? { "Authorization": `Bearer ${token}` } : {};
+              const res = await fetch(url, { headers });
+              if (res.ok) {
+                const data = await res.json();
+                if (data && data.data) {
+                  this.organisations = data.data.map(org => ({
+                    id: org.id,
+                    name: org.name,
+                    is_active: org.is_active !== undefined ? org.is_active : true
+                  }));
+                }
+              }
+            } catch (err) {
+              console.error("Failed fetching organisations:", err);
+            } finally {
+              this.loading = false;
+            }
+          },
+
+          async fetchCompanies(orgId) {
+            const token = this.getToken();
+            this.loading = true;
+            try {
+              const url = `https://dev-siteops-platform.transvolt.org/api/v1/onboarding/${orgId}/companies?page=1&page_size=20&is_active=all`;
+              const headers = token ? { "Authorization": `Bearer ${token}` } : {};
+              const res = await fetch(url, { headers });
+              if (res.ok) {
+                const data = await res.json();
+                if (data && data.data) {
+                  // Merge or set
+                  const fetched = data.data.map(c => ({
+                    id: c.id,
+                    name: c.name,
+                    organisation_id: orgId,
+                    is_active: c.is_active !== undefined ? c.is_active : true
+                  }));
+                  // remove old ones for this org and insert new ones
+                  this.companies = this.companies.filter(c => c.organisation_id !== orgId).concat(fetched);
+                }
+              }
+            } catch (err) {
+              console.error("Failed fetching companies:", err);
+            } finally {
+              this.loading = false;
+            }
+          },
+
+          async fetchProjects(companyId) {
+            const token = this.getToken();
+            this.loading = true;
+            try {
+              const url = `https://dev-siteops-platform.transvolt.org/api/v1/onboarding/companies/${companyId}/projects?page=1&page_size=20&is_active=all`;
+              const headers = token ? { "Authorization": `Bearer ${token}` } : {};
+              const res = await fetch(url, { headers });
+              if (res.ok) {
+                const data = await res.json();
+                if (data && data.data) {
+                  const fetched = data.data.map(p => ({
+                    id: p.id,
+                    name: p.name,
+                    company_id: companyId,
+                    is_active: p.is_active !== undefined ? p.is_active : true
+                  }));
+                  this.projects = this.projects.filter(p => p.company_id !== companyId).concat(fetched);
+                }
+              }
+            } catch (err) {
+              console.error("Failed fetching projects:", err);
+            } finally {
+              this.loading = false;
+            }
+          },
+
+          async fetchSites(projectId) {
+            const token = this.getToken();
+            this.loading = true;
+            try {
+              const url = `https://dev-siteops-platform.transvolt.org/api/v1/onboarding/projects/${projectId}/sites?page=1&page_size=20&is_active=all`;
+              const headers = token ? { "Authorization": `Bearer ${token}` } : {};
+              const res = await fetch(url, { headers });
+              if (res.ok) {
+                const data = await res.json();
+                if (data && data.data) {
+                  const fetched = data.data.map(s => ({
+                    id: s.id,
+                    name: s.name,
+                    code: s.code,
+                    location: s.location || 'India',
+                    project_id: projectId,
+                    is_active: s.is_active !== undefined ? s.is_active : true
+                  }));
+                  this.sites = this.sites.filter(s => s.project_id !== projectId).concat(fetched);
+                }
+              }
+            } catch (err) {
+              console.error("Failed fetching sites:", err);
+            } finally {
+              this.loading = false;
+            }
+          },
+
+          // CRUD Modals Trigger
+          openAddModal() {
+            // Validation: Make sure hierarchy is selected
+            if (this.activeTab === 'companies' && !this.selectedOrgId) {
+              this.showNotification('Please select an Organization first', 'error');
+              return;
+            }
+            if (this.activeTab === 'projects' && !this.selectedCompanyId) {
+              this.showNotification('Please select a Company first', 'error');
+              return;
+            }
+            if (this.activeTab === 'sites' && !this.selectedProjectId) {
+              this.showNotification('Please select a Project first', 'error');
+              return;
+            }
+
+            this.isEditMode = false;
+            this.formData = {
+              id: null,
+              name: '',
+              code: '',
+              location: '',
+              is_active: true
+            };
+            this.showModal = true;
+          },
+
+          openEditModal(item) {
+            this.isEditMode = true;
+            this.formData = {
+              id: item.id,
+              name: item.name,
+              code: item.code || '',
+              location: item.location || '',
+              is_active: item.is_active !== undefined ? item.is_active : true
+            };
+            this.showModal = true;
+          },
+
+          // Save / Edit Execution
+          async saveEntity() {
+            const token = this.getToken();
+            const tab = this.activeTab;
+            
+            // Show loading
+            this.loading = true;
+            this.showModal = false;
+
+            try {
+              let url = '';
+              let method = this.isEditMode ? 'PATCH' : 'POST';
+              let body = {};
+              let success = false;
+
+              if (tab === 'organizations') {
+                url = this.isEditMode ? `https://dev-siteops-platform.transvolt.org/api/v1/onboarding/${this.formData.id}` : `https://dev-siteops-platform.transvolt.org/api/v1/onboarding/`;
+                body = { name: this.formData.name, is_active: this.formData.is_active };
+              } else if (tab === 'companies') {
+                url = this.isEditMode ? `https://dev-siteops-platform.transvolt.org/api/v1/onboarding/companies/${this.formData.id}` : `https://dev-siteops-platform.transvolt.org/api/v1/onboarding/${this.selectedOrgId}/companies`;
+                body = { name: this.formData.name, is_active: this.formData.is_active };
+              } else if (tab === 'projects') {
+                url = this.isEditMode ? `https://dev-siteops-platform.transvolt.org/api/v1/onboarding/projects/${this.formData.id}` : `https://dev-siteops-platform.transvolt.org/api/v1/onboarding/companies/${this.selectedCompanyId}/projects`;
+                body = { name: this.formData.name, is_active: this.formData.is_active };
+              } else if (tab === 'sites') {
+                url = this.isEditMode ? `https://dev-siteops-platform.transvolt.org/api/v1/onboarding/sites/${this.formData.id}` : `https://dev-siteops-platform.transvolt.org/api/v1/onboarding/projects/${this.selectedProjectId}/sites`;
+                body = { name: this.formData.name, code: this.formData.code, location: this.formData.location || '', is_active: this.formData.is_active };
+              }
+
+              if (token) {
+                const res = await fetch(url, {
+                  method: method,
+                  headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Content-Type": "application/json"
+                  },
+                  body: JSON.stringify(body)
+                });
+                if (res.ok) {
+                  const data = await res.json();
+                  if (data && data.result) {
+                    success = true;
+                  }
+                }
+              }
+
+              // Dual mode fallback: If not logged in or API fails, run simulated local CRUD
+              if (!success) {
+                console.log("Saving locally (Dual-mode Simulation)...");
+                const newId = this.formData.id || ('mock-' + Math.random().toString(36).substr(2, 9));
+                
+                if (tab === 'organizations') {
+                  if (this.isEditMode) {
+                    this.organisations = this.organisations.map(o => o.id === newId ? { ...o, ...body } : o);
+                  } else {
+                    this.organisations.push({ id: newId, ...body });
+                  }
+                } else if (tab === 'companies') {
+                  if (this.isEditMode) {
+                    this.companies = this.companies.map(c => c.id === newId ? { ...c, ...body } : c);
+                  } else {
+                    this.companies.push({ id: newId, organisation_id: this.selectedOrgId, ...body });
+                  }
+                } else if (tab === 'projects') {
+                  if (this.isEditMode) {
+                    this.projects = this.projects.map(p => p.id === newId ? { ...p, ...body } : p);
+                  } else {
+                    this.projects.push({ id: newId, company_id: this.selectedCompanyId, ...body });
+                  }
+                } else if (tab === 'sites') {
+                  if (this.isEditMode) {
+                    this.sites = this.sites.map(s => s.id === newId ? { ...s, ...body } : s);
+                  } else {
+                    this.sites.push({ id: newId, project_id: this.selectedProjectId, ...body });
+                  }
+                }
+              }
+
+              // Update activities timeline feed
+              this.recentActivities.unshift({
+                entity_type: tab.slice(0, -1),
+                entity_id: this.formData.id || 'new-id',
+                name: this.formData.name,
+                action: this.isEditMode ? 'updated' : 'created',
+                user_name: 'System Admin',
+                user_role: 'admin',
+                timestamp: new Date().toISOString()
+              });
+
+              // Update stats
+              this.recalculateCounts();
+              this.showNotification(`Successfully ${this.isEditMode ? 'updated' : 'added'} ${this.formData.name}!`);
+
+            } catch (err) {
+              console.error("Error saving entity:", err);
+              this.showNotification("Failed to save entity. Try again.", "error");
+            } finally {
+              this.loading = false;
+            }
+          },
+
+          deleteEntityConfirm(id) {
+            if (confirm("Are you sure you want to delete this entity?")) {
+              this.deleteEntity(id);
+            }
+          },
+
+          async deleteEntity(id) {
+            const token = this.getToken();
+            const tab = this.activeTab;
+            this.loading = true;
+
+            try {
+              let url = '';
+              let success = false;
+
+              if (tab === 'organizations') {
+                url = `https://dev-siteops-platform.transvolt.org/api/v1/onboarding/${id}`;
+              } else if (tab === 'companies') {
+                url = `https://dev-siteops-platform.transvolt.org/api/v1/onboarding/companies/${id}`;
+              } else if (tab === 'projects') {
+                url = `https://dev-siteops-platform.transvolt.org/api/v1/onboarding/projects/${id}`;
+              } else if (tab === 'sites') {
+                url = `https://dev-siteops-platform.transvolt.org/api/v1/onboarding/sites/${id}`;
+              }
+
+              if (token) {
+                const res = await fetch(url, {
+                  method: 'DELETE',
+                  headers: { "Authorization": `Bearer ${token}` }
+                });
+                if (res.ok) {
+                  success = true;
+                }
+              }
+
+              const entityName = this.getEntityName(id);
+
+              // Fallback local deletion
+              if (tab === 'organizations') {
+                this.organisations = this.organisations.filter(o => o.id !== id);
+              } else if (tab === 'companies') {
+                this.companies = this.companies.filter(c => c.id !== id);
+              } else if (tab === 'projects') {
+                this.projects = this.projects.filter(p => p.id !== id);
+              } else if (tab === 'sites') {
+                this.sites = this.sites.filter(s => s.id !== id);
+              }
+
+              // Update timeline feed
+              this.recentActivities.unshift({
+                entity_type: tab.slice(0, -1),
+                entity_id: id,
+                name: entityName || 'Entity',
+                action: 'deleted',
+                user_name: 'System Admin',
+                user_role: 'admin',
+                timestamp: new Date().toISOString()
+              });
+
+              this.recalculateCounts();
+              this.showNotification(`Successfully deleted entity!`);
+
+            } catch (err) {
+              console.error("Error deleting entity:", err);
+              this.showNotification("Failed to delete entity.", "error");
+            } finally {
+              this.loading = false;
+            }
+          },
+
+          getEntityName(id) {
+            const tab = this.activeTab;
+            if (tab === 'organizations') {
+              const o = this.organisations.find(org => org.id === id);
+              return o ? o.name : '';
+            } else if (tab === 'companies') {
+              const c = this.companies.find(comp => comp.id === id);
+              return c ? c.name : '';
+            } else if (tab === 'projects') {
+              const p = this.projects.find(proj => proj.id === id);
+              return p ? p.name : '';
+            } else if (tab === 'sites') {
+              const s = this.sites.find(site => site.id === id);
+              return s ? s.name : '';
+            }
+            return '';
+          },
+
+          recalculateCounts() {
+            this.counts.organisations = {
+              total: this.organisations.length,
+              active: this.organisations.filter(o => o.is_active).length
+            };
+            this.counts.companies = {
+              total: this.companies.length,
+              active: this.companies.filter(c => c.is_active).length
+            };
+            this.counts.projects = {
+              total: this.projects.length,
+              active: this.projects.filter(p => p.is_active).length
+            };
+            this.counts.sites = {
+              total: this.sites.length,
+              active: this.sites.filter(s => s.is_active).length
+            };
+          }
+
+        };
+      }
+    </script>
+  </body>
+</html>

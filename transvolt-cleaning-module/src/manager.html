@@ -1,0 +1,1035 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport"
+    content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+  <title>
+    Fleet Manager QA Dashboard | TransVolt
+  </title>
+  <!-- Phosphor Icons for large, accessible iconography -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <style>
+    /* Ensure file inputs are fully hidden but functional via labels */
+    input[type="file"] {
+      display: none;
+    }
+  </style>
+</head>
+
+<body x-data="{ 
+      page: 'manager', 
+      loaded: true, 
+      darkMode: false, 
+      stickyMenu: false, 
+      sidebarToggle: false, 
+      scrollTop: false,
+      auditModalOpen: false,
+      photoModalOpen: false,
+      activeBusToAudit: null,
+      quickTagSelected: null,
+      activeTab: 'cleaning'
+    }" x-init="
+         darkMode = JSON.parse(localStorage.getItem('darkMode'));
+         $watch('darkMode', value => localStorage.setItem('darkMode', JSON.stringify(value)))"
+  :class="{'dark bg-gray-900': darkMode === true}">
+  <!-- ===== Preloader Start ===== -->
+  <include src="./partials/preloader.html"></include>
+  <!-- ===== Preloader End ===== -->
+
+  <!-- ===== Page Wrapper Start ===== -->
+  <div class="flex h-screen overflow-hidden">
+    <!-- ===== Sidebar Start ===== -->
+    <include src="./partials/sidebar.html"></include>
+    <!-- ===== Sidebar End ===== -->
+
+    <!-- ===== Content Area Start ===== -->
+    <div class="relative flex flex-col flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900">
+      <!-- Small Device Overlay Start -->
+      <include src="./partials/overlay.html" />
+      <!-- Small Device Overlay End -->
+
+      <!-- ===== Header Start ===== -->
+      <include src="./partials/header.html" />
+      <!-- ===== Header End ===== -->
+
+      <!-- ===== Main Content Start ===== -->
+      <main>
+        <div class="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">
+
+          <div class="mb-6 border-b border-gray-200 dark:border-gray-700">
+            <nav class="-mb-px flex gap-6" aria-label="Tabs">
+              <button @click="activeTab = 'cleaning'"
+                class="inline-flex shrink-0 items-center gap-2 border-b-2 px-1 pb-4 text-sm font-medium transition-colors"
+                :class="activeTab === 'cleaning' ? 'border-brand-500 text-brand-600 dark:text-brand-500' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'">
+                <i class="ph ph-bus text-lg"></i> Vehicle Cleaning
+              </button>
+              <button @click="activeTab = 'depot_cleaning'"
+                class="inline-flex shrink-0 items-center gap-2 border-b-2 px-1 pb-4 text-sm font-medium transition-colors"
+                :class="activeTab === 'depot_cleaning' ? 'border-brand-500 text-brand-600 dark:text-brand-500' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'">
+                <i class="ph ph-buildings text-lg"></i> Depot Cleaning QA
+              </button>
+              <button @click="activeTab = 'history'"
+                class="inline-flex shrink-0 items-center gap-2 border-b-2 px-1 pb-4 text-sm font-medium transition-colors"
+                :class="activeTab === 'history' ? 'border-brand-500 text-brand-600 dark:text-brand-500' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'">
+                <i class="ph ph-clock-counter-clockwise text-lg"></i> Cleaning History
+              </button>
+            </nav>
+          </div>
+
+          <div x-show="activeTab === 'cleaning'">
+            <div x-data="{ filterType: 'All' }" class="mb-8">
+              <div class="col-span-1 sm:col-span-2 mb-4 overflow-x-auto no-scrollbar pb-2">
+                <div
+                  class="relative flex items-center h-12 w-max rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm px-1">
+
+                  <!-- Gooey Background Layer -->
+                  <div class="absolute inset-0 pointer-events-none rounded-full overflow-hidden"
+                    style="filter: url('#goo');">
+                    <div class="absolute top-1 h-10 bg-brand-500 rounded-full transition-all duration-[600ms] z-0"
+                      style="transition-timing-function: cubic-bezier(0.68, -0.2, 0.26, 1.3);" :style="
+                         filterType === 'All' ? 'width: 50px; transform: translateX(4px);' :
+                         filterType === 'Quick Clean' ? 'width: 104px; transform: translateX(58px);' :
+                         filterType === 'Overnight Clean' ? 'width: 134px; transform: translateX(166px);' :
+                         'width: 100px; transform: translateX(304px);'
+                       ">
+                    </div>
+                  </div>
+
+                  <!-- Foreground Interactive Buttons -->
+                  <div class="relative flex items-center h-full z-10">
+                    <button @click="filterType = 'All'"
+                      class="w-[50px] h-10 rounded-full font-bold text-sm transition-colors duration-300"
+                      :class="filterType === 'All' ? 'text-white' : 'text-gray-600 dark:text-gray-300 hover:text-brand-500 dark:hover:text-brand-400'">All</button>
+                    <button @click="filterType = 'Quick Clean'"
+                      class="w-[104px] h-10 rounded-full font-bold text-sm transition-colors duration-300 ml-1"
+                      :class="filterType === 'Quick Clean' ? 'text-white' : 'text-gray-600 dark:text-gray-300 hover:text-brand-500 dark:hover:text-brand-400'">Quick
+                      Clean</button>
+                    <button @click="filterType = 'Overnight Clean'"
+                      class="w-[134px] h-10 rounded-full font-bold text-sm transition-colors duration-300 ml-1"
+                      :class="filterType === 'Overnight Clean' ? 'text-white' : 'text-gray-600 dark:text-gray-300 hover:text-brand-500 dark:hover:text-brand-400'">Overnight
+                      Clean</button>
+                    <button @click="filterType = 'Deep Clean'"
+                      class="w-[100px] h-10 rounded-full font-bold text-sm transition-colors duration-300 ml-1"
+                      :class="filterType === 'Deep Clean' ? 'text-white' : 'text-gray-600 dark:text-gray-300 hover:text-brand-500 dark:hover:text-brand-400'">Deep
+                      Clean</button>
+                  </div>
+                </div>
+              </div>
+
+
+              <!-- Top Stats -->
+              <div class="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6 mb-8">
+                <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
+                  <div class="flex items-center gap-4">
+                    <div
+                      class="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                      <i class="ph ph-bus text-2xl"></i>
+                    </div>
+                    <div>
+                      <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">142</h4>
+                      <span class="text-sm text-gray-500 dark:text-gray-400">Total Fleet</span>
+                    </div>
+                  </div>
+                </div>
+                <div
+                  class="rounded-2xl border border-warning-200 bg-warning-50 p-5 dark:border-warning-900 dark:bg-warning-500/10">
+                  <div class="flex items-center gap-4">
+                    <div
+                      class="flex h-12 w-12 items-center justify-center rounded-xl bg-warning-100 text-warning-600 dark:bg-warning-500/20 dark:text-warning-500">
+                      <i class="ph ph-clipboard-text text-2xl"></i>
+                    </div>
+                    <div>
+                      <h4 class="text-title-sm font-bold text-warning-800 dark:text-warning-400">4</h4>
+                      <span class="text-sm text-warning-700 dark:text-warning-500">Ready for QA</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
+                  <div class="flex items-center gap-4">
+                    <div
+                      class="flex h-12 w-12 items-center justify-center rounded-xl bg-success-50 text-success-600 dark:bg-success-500/10 dark:text-success-400">
+                      <i class="ph ph-check-circle text-2xl"></i>
+                    </div>
+                    <div>
+                      <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">126</h4>
+                      <span class="text-sm text-gray-500 dark:text-gray-400">Dispatched Today</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Grid View -->
+              <div class="grid grid-cols-1 gap-6">
+
+                <!-- Column 1: Action Required (Ready for QA + Rejected) -->
+                <div class="space-y-6">
+                  <h3 class="text-lg font-bold text-gray-800 dark:text-white/90">Action Required</h3>
+
+                  <!-- System Flagged Audit Card -->
+                  <div x-data="{ status: 'ai_audit' }" x-show="status === 'ai_audit'"
+                    class="overflow-hidden rounded-2xl border-2 border-purple-400 bg-white shadow-sm dark:border-purple-600 dark:bg-gray-800">
+                    <div
+                      class="border-b border-purple-100 bg-purple-50 p-4 dark:border-purple-900/50 dark:bg-purple-500/10">
+                      <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                          <i class="ph ph-pulse text-xl text-purple-600 dark:text-purple-500 animate-pulse"></i>
+                          <span class="font-bold text-purple-800 dark:text-purple-400">SYSTEM FLAGGED: PRIORITY
+                            AUDIT</span>
+                        </div>
+                        <span
+                          class="rounded bg-purple-100 px-2.5 py-0.5 text-xs font-bold text-purple-800 dark:bg-purple-500/20 dark:text-purple-400">Risk
+                          Score: 88/100</span>
+                      </div>
+                    </div>
+                    <div class="p-6">
+                      <div class="flex items-center justify-between mb-4">
+                        <div>
+                          <h4
+                            class="text-2xl font-black text-gray-900 dark:text-white flex flex-wrap items-center gap-3">
+                            Bus #101
+                            <span
+                              class="rounded-full shrink-0 whitespace-nowrap bg-purple-50 px-2 py-0.5 text-xs font-bold text-purple-600 dark:bg-purple-500/15 dark:text-purple-500 uppercase tracking-wider border border-purple-100 dark:border-purple-800">Priority
+                              Review</span>
+                          </h4>
+                          <p class="text-gray-500 mt-1 dark:text-gray-400">EV, Single Decker</p>
+                        </div>
+                        <div class="text-right">
+                          <p class="text-sm font-bold text-gray-700 dark:text-gray-300">Cleaned by:</p>
+                          <p class="text-gray-500 dark:text-gray-400">Vendor 10-Min Quick</p>
+                        </div>
+                      </div>
+
+                      <div
+                        class="rounded-xl bg-gray-50 p-4 border border-gray-200 dark:bg-gray-900/50 dark:border-gray-700 mb-6">
+                        <p class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">System Heuristics Flagged:
+                        </p>
+                        <ul class="space-y-3">
+                          <li class="flex items-start gap-3">
+                            <i class="ph ph-users-three text-lg text-brand-500 mt-0.5"></i>
+                            <div>
+                              <p class="text-sm font-bold text-gray-800 dark:text-gray-200">Heavy Route Density</p>
+                              <p class="text-xs text-gray-500 dark:text-gray-400">Returned from Stadium Route during
+                                peak commuter hours.</p>
+                            </div>
+                          </li>
+                          <li class="flex items-start gap-3">
+                            <i class="ph ph-cloud-rain text-lg text-brand-500 mt-0.5"></i>
+                            <div>
+                              <p class="text-sm font-bold text-gray-800 dark:text-gray-200">Environmental Modifier</p>
+                              <p class="text-xs text-gray-500 dark:text-gray-400">Heavy rain reported across city (+20%
+                                grime risk).</p>
+                            </div>
+                          </li>
+                          <li class="flex items-start gap-3">
+                            <i class="ph ph-wrench text-lg text-error-500 mt-0.5"></i>
+                            <div>
+                              <p class="text-sm font-bold text-gray-800 dark:text-gray-200">Maintenance History</p>
+                              <p class="text-xs text-error-600 dark:text-error-400">Has not had a deep clean in 28 days.
+                              </p>
+                            </div>
+                          </li>
+                        </ul>
+                      </div>
+
+                      <div class="mt-2 flex gap-4">
+                        <button @click="status = 'approved'"
+                          class="flex-1 flex items-center justify-center rounded-xl bg-success-500 h-20 transition-colors hover:bg-success-600 shadow-sm">
+                          <i class="ph ph-check-circle text-5xl text-white"></i>
+                        </button>
+                        <button @click="auditModalOpen = true; activeBusToAudit = 'Bus #101'"
+                          class="flex-1 flex items-center justify-center rounded-xl bg-error-50 h-20 border-2 border-error-200 transition-colors hover:bg-error-100 dark:bg-error-500/10 dark:border-error-500/30 dark:hover:bg-error-500/20 shadow-sm">
+                          <i class="ph ph-x-circle text-5xl text-error-600 dark:text-error-500"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Rejected / Hold Card -->
+                  <div x-data="{ status: 'rejected' }" x-show="status === 'rejected'"
+                    class="overflow-hidden rounded-2xl border-2 border-error-500 bg-white shadow-sm dark:bg-gray-800">
+                    <div
+                      class="border-b border-error-100 bg-error-50 p-4 dark:border-error-900/50 dark:bg-error-500/10">
+                      <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                          <i class="ph ph-warning-circle text-xl text-error-600 dark:text-error-500"></i>
+                          <span class="font-bold text-error-800 dark:text-error-400">AUDIT FAILED - HOLD</span>
+                        </div>
+                        <span
+                          class="rounded bg-error-100 px-2.5 py-0.5 text-xs font-bold text-error-800 dark:bg-error-500/20 dark:text-error-400">Bay
+                          12</span>
+                      </div>
+                    </div>
+                    <div class="p-6">
+                      <div class="flex items-center justify-between mb-4">
+                        <div>
+                          <h4
+                            class="text-xl font-black text-gray-900 dark:text-white flex flex-wrap items-center gap-3">
+                            Bus #821
+                            <span
+                              class="rounded-full shrink-0 whitespace-nowrap bg-error-50 px-2 py-0.5 text-xs font-bold text-error-600 dark:bg-error-500/15 dark:text-error-500 uppercase tracking-wider border border-error-100 dark:border-error-800">Deep
+                              Clean</span>
+                          </h4>
+                          <p class="text-gray-500 mt-1 dark:text-gray-400">ICE, Double Decker</p>
+                        </div>
+                        <div class="text-right">
+                          <p class="text-sm font-bold text-gray-700 dark:text-gray-300">Cleaned by:</p>
+                          <p class="text-gray-500 dark:text-gray-400">John D. (Supervisor)</p>
+                        </div>
+                      </div>
+                      <div
+                        class="rounded-xl bg-gray-50 p-4 border border-gray-200 dark:bg-gray-900/50 dark:border-gray-700">
+                        <p class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Failure Reason:</p>
+                        <div class="flex gap-2">
+                          <span
+                            class="rounded bg-gray-200 px-3 py-1 text-sm font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-300"><i
+                              class="ph ph-trash mr-1"></i> Trash remaining</span>
+                        </div>
+                      </div>
+                      <div class="mt-6 flex gap-3">
+                        <button @click="status = 'cleared'"
+                          class="flex-1 rounded-xl bg-success-500 py-3 font-bold text-white transition-colors hover:bg-success-600">Re-Audit:
+                          Pass</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Ready for QA Card -->
+                  <div x-data="{ status: 'qa' }"
+                    x-show="status === 'qa' && (filterType === 'All' || filterType === 'Quick Clean')"
+                    class="overflow-hidden rounded-2xl border-2 border-warning-400 bg-white shadow-sm dark:border-warning-600 dark:bg-gray-800">
+                    <div
+                      class="border-b border-warning-100 bg-warning-50 p-4 dark:border-warning-900/50 dark:bg-warning-500/10">
+                      <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                          <i class="ph ph-clipboard-text text-xl text-warning-600 dark:text-warning-500"></i>
+                          <span class="font-bold text-warning-800 dark:text-warning-400">READY FOR QA</span>
+                        </div>
+                        <span
+                          class="rounded bg-warning-100 px-2.5 py-0.5 text-xs font-bold text-warning-800 dark:bg-warning-500/20 dark:text-warning-400">Bay
+                          4</span>
+                      </div>
+                    </div>
+                    <div class="p-6">
+                      <div class="flex items-center justify-between mb-4">
+                        <div>
+                          <h4
+                            class="text-2xl font-black text-gray-900 dark:text-white flex flex-wrap items-center gap-3">
+                            Bus #402
+                            <span
+                              class="rounded-full shrink-0 whitespace-nowrap bg-brand-50 px-2 py-0.5 text-xs font-bold text-brand-600 dark:bg-brand-500/15 dark:text-brand-500 uppercase tracking-wider border border-brand-100 dark:border-brand-800">Quick
+                              Clean</span>
+                          </h4>
+                          <p class="text-gray-500 mt-1 dark:text-gray-400">EV, Single Decker</p>
+                        </div>
+                        <div class="text-right">
+                          <p class="text-sm font-bold text-gray-700 dark:text-gray-300">Cleaned by:</p>
+                          <p class="text-gray-500 dark:text-gray-400">Sarah M. (Supervisor)</p>
+                        </div>
+                      </div>
+                      <div class="flex items-center gap-4 mb-4">
+                        <div class="flex items-center gap-2">
+                          <i class="ph ph-timer text-gray-400"></i>
+                          <span class="text-sm text-gray-600 dark:text-gray-300">Time taken: <strong>08m 45s</strong>
+                            (SLA
+                            Met)</span>
+                        </div>
+                      </div>
+                      <div class="mb-6">
+                        <button @click="photoModalOpen = true; activeBusToAudit = 'Bus #402'"
+                          class="w-full flex items-center justify-center gap-2 rounded-xl bg-brand-50 py-4 text-lg font-bold text-brand-600 transition-colors hover:bg-brand-100 dark:bg-brand-500/10 dark:text-brand-400 dark:hover:bg-brand-500/20">
+                          <i class="ph ph-image text-2xl"></i> View Photos (4)
+                        </button>
+                      </div>
+                      <div class="mt-2 flex gap-4">
+                        <button @click="status = 'approved'"
+                          class="flex-1 flex items-center justify-center rounded-xl bg-success-500 h-20 transition-colors hover:bg-success-600 shadow-sm">
+                          <i class="ph ph-check-circle text-5xl text-white"></i>
+                        </button>
+                        <button @click="auditModalOpen = true; activeBusToAudit = 'Bus #402'"
+                          class="flex-1 flex items-center justify-center rounded-xl bg-error-50 h-20 border-2 border-error-200 transition-colors hover:bg-error-100 dark:bg-error-500/10 dark:border-error-500/30 dark:hover:bg-error-500/20 shadow-sm">
+                          <i class="ph ph-x-circle text-5xl text-error-600 dark:text-error-500"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Ready for QA Card 2 -->
+                  <div x-data="{ status: 'qa' }"
+                    x-show="status === 'qa' && (filterType === 'All' || filterType === 'Quick Clean')"
+                    class="overflow-hidden rounded-2xl border-2 border-warning-400 bg-white shadow-sm dark:border-warning-600 dark:bg-gray-800">
+                    <div
+                      class="border-b border-warning-100 bg-warning-50 p-4 dark:border-warning-900/50 dark:bg-warning-500/10">
+                      <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                          <i class="ph ph-clipboard-text text-xl text-warning-600 dark:text-warning-500"></i>
+                          <span class="font-bold text-warning-800 dark:text-warning-400">READY FOR QA</span>
+                        </div>
+                        <span
+                          class="rounded bg-warning-100 px-2.5 py-0.5 text-xs font-bold text-warning-800 dark:bg-warning-500/20 dark:text-warning-400">Bay
+                          1</span>
+                      </div>
+                    </div>
+                    <div class="p-6">
+                      <div class="flex items-center justify-between mb-4">
+                        <div>
+                          <h4
+                            class="text-2xl font-black text-gray-900 dark:text-white flex flex-wrap items-center gap-3">
+                            Bus #511
+                            <span
+                              class="rounded-full shrink-0 whitespace-nowrap bg-purple-50 px-2 py-0.5 text-xs font-bold text-purple-600 dark:bg-purple-500/15 dark:text-purple-400 uppercase tracking-wider border border-purple-100 dark:border-purple-800">Overnight
+                              Clean</span>
+                          </h4>
+                          <p class="text-gray-500 mt-1 dark:text-gray-400">ICE, Single Decker</p>
+                        </div>
+                        <div class="text-right">
+                          <p class="text-sm font-bold text-gray-700 dark:text-gray-300">Cleaned by:</p>
+                          <p class="text-gray-500 dark:text-gray-400">Mike R. (Supervisor)</p>
+                        </div>
+                      </div>
+                      <div class="flex items-center gap-4 mb-4">
+                        <div class="flex items-center gap-2">
+                          <i class="ph ph-timer text-error-500"></i>
+                          <span class="text-sm text-gray-600 dark:text-gray-300">Time taken: <strong
+                              class="text-error-600 dark:text-error-400">12m 30s</strong> (SLA Missed)</span>
+                        </div>
+                      </div>
+                      <div class="mb-6">
+                        <button @click="photoModalOpen = true; activeBusToAudit = 'Bus #511'"
+                          class="w-full flex items-center justify-center gap-2 rounded-xl bg-brand-50 py-4 text-lg font-bold text-brand-600 transition-colors hover:bg-brand-100 dark:bg-brand-500/10 dark:text-brand-400 dark:hover:bg-brand-500/20">
+                          <i class="ph ph-image text-2xl"></i> View Photos (2)
+                        </button>
+                      </div>
+                      <!-- Exception Alert -->
+                      <div
+                        class="mb-6 rounded-lg bg-gray-50 p-3 border border-gray-200 flex items-start gap-2 dark:bg-gray-900/50 dark:border-gray-700">
+                        <i class="ph ph-warning text-warning-500 mt-0.5"></i>
+                        <p class="text-sm text-gray-700 dark:text-gray-300"><strong>Note:</strong> Took longer because
+                          large
+                          coffee spill on floor required extra mopping.</p>
+                      </div>
+                      <div class="mt-2 flex gap-4">
+                        <button @click="status = 'approved'"
+                          class="flex-1 flex items-center justify-center rounded-xl bg-success-500 h-20 transition-colors hover:bg-success-600 shadow-sm">
+                          <i class="ph ph-check-circle text-5xl text-white"></i>
+                        </button>
+                        <button @click="auditModalOpen = true; activeBusToAudit = 'Bus #511'"
+                          class="flex-1 flex items-center justify-center rounded-xl bg-error-50 h-20 border-2 border-error-200 transition-colors hover:bg-error-100 dark:bg-error-500/10 dark:border-error-500/30 dark:hover:bg-error-500/20 shadow-sm">
+                          <i class="ph ph-x-circle text-5xl text-error-600 dark:text-error-500"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Ready for QA Card 3 -->
+                  <div x-data="{ status: 'qa' }"
+                    x-show="status === 'qa' && (filterType === 'All' || filterType === 'Deep Clean')"
+                    class="overflow-hidden rounded-2xl border-2 border-warning-400 bg-white shadow-sm dark:border-warning-600 dark:bg-gray-800">
+                    <div
+                      class="border-b border-warning-100 bg-warning-50 p-4 dark:border-warning-900/50 dark:bg-warning-500/10">
+                      <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                          <i class="ph ph-clipboard-text text-xl text-warning-600 dark:text-warning-500"></i>
+                          <span class="font-bold text-warning-800 dark:text-warning-400">READY FOR QA</span>
+                        </div>
+                        <span
+                          class="rounded bg-warning-100 px-2.5 py-0.5 text-xs font-bold text-warning-800 dark:bg-warning-500/20 dark:text-warning-400">Bay
+                          8</span>
+                      </div>
+                    </div>
+                    <div class="p-6">
+                      <div class="flex items-center justify-between mb-4">
+                        <div>
+                          <h4
+                            class="text-2xl font-black text-gray-900 dark:text-white flex flex-wrap items-center gap-3">
+                            Bus #988
+                            <span
+                              class="rounded-full shrink-0 whitespace-nowrap bg-error-50 px-2 py-0.5 text-xs font-bold text-error-600 dark:bg-error-500/15 dark:text-error-500 uppercase tracking-wider border border-error-100 dark:border-error-800">Deep
+                              Clean</span>
+                          </h4>
+                          <p class="text-gray-500 mt-1 dark:text-gray-400">EV, Articulated</p>
+                        </div>
+                        <div class="text-right">
+                          <p class="text-sm font-bold text-gray-700 dark:text-gray-300">Cleaned by:</p>
+                          <p class="text-gray-500 dark:text-gray-400">David K. (Supervisor)</p>
+                        </div>
+                      </div>
+                      <div class="flex items-center gap-4 mb-4">
+                        <div class="flex items-center gap-2">
+                          <i class="ph ph-timer text-gray-400"></i>
+                          <span class="text-sm text-gray-600 dark:text-gray-300">Time taken: <strong>03h 45m</strong>
+                            (SLA Met)</span>
+                        </div>
+                      </div>
+                      <div class="mb-6">
+                        <button @click="photoModalOpen = true; activeBusToAudit = 'Bus #988'"
+                          class="w-full flex items-center justify-center gap-2 rounded-xl bg-brand-50 py-4 text-lg font-bold text-brand-600 transition-colors hover:bg-brand-100 dark:bg-brand-500/10 dark:text-brand-400 dark:hover:bg-brand-500/20">
+                          <i class="ph ph-image text-2xl"></i> View Photos (6)
+                        </button>
+                      </div>
+                      <div class="mt-2 flex gap-4">
+                        <button @click="status = 'approved'"
+                          class="flex-1 flex items-center justify-center rounded-xl bg-success-500 h-20 transition-colors hover:bg-success-600 shadow-sm"><i
+                            class="ph ph-check-circle text-5xl text-white"></i></button>
+                        <button @click="auditModalOpen = true; activeBusToAudit = 'Bus #988'"
+                          class="flex-1 flex items-center justify-center rounded-xl bg-error-50 h-20 border-2 border-error-200 transition-colors hover:bg-error-100 dark:bg-error-500/10 dark:border-error-500/30 dark:hover:bg-error-500/20 shadow-sm"><i
+                            class="ph ph-x-circle text-5xl text-error-600 dark:text-error-500"></i></button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Ready for QA Card 4 -->
+                  <div x-data="{ status: 'qa' }" x-show="status === 'qa'"
+                    class="overflow-hidden rounded-2xl border-2 border-warning-400 bg-white shadow-sm dark:border-warning-600 dark:bg-gray-800">
+                    <div
+                      class="border-b border-warning-100 bg-warning-50 p-4 dark:border-warning-900/50 dark:bg-warning-500/10">
+                      <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                          <i class="ph ph-clipboard-text text-xl text-warning-600 dark:text-warning-500"></i>
+                          <span class="font-bold text-warning-800 dark:text-warning-400">READY FOR QA</span>
+                        </div>
+                        <span
+                          class="rounded bg-warning-100 px-2.5 py-0.5 text-xs font-bold text-warning-800 dark:bg-warning-500/20 dark:text-warning-400">Bay
+                          2</span>
+                      </div>
+                    </div>
+                    <div class="p-6">
+                      <div class="flex items-center justify-between mb-4">
+                        <div>
+                          <h4
+                            class="text-2xl font-black text-gray-900 dark:text-white flex flex-wrap items-center gap-3">
+                            Bus #111
+                            <span
+                              class="rounded-full shrink-0 whitespace-nowrap bg-brand-50 px-2 py-0.5 text-xs font-bold text-brand-600 dark:bg-brand-500/15 dark:text-brand-500 uppercase tracking-wider border border-brand-100 dark:border-brand-800">Quick
+                              Clean</span>
+                          </h4>
+                          <p class="text-gray-500 mt-1 dark:text-gray-400">ICE, Single Decker</p>
+                        </div>
+                        <div class="text-right">
+                          <p class="text-sm font-bold text-gray-700 dark:text-gray-300">Cleaned by:</p>
+                          <p class="text-gray-500 dark:text-gray-400">Sarah M. (Supervisor)</p>
+                        </div>
+                      </div>
+                      <div class="flex items-center gap-4 mb-4">
+                        <div class="flex items-center gap-2">
+                          <i class="ph ph-timer text-gray-400"></i>
+                          <span class="text-sm text-gray-600 dark:text-gray-300">Time taken: <strong>09m 10s</strong>
+                            (SLA Met)</span>
+                        </div>
+                      </div>
+                      <div class="mb-6">
+                        <button @click="photoModalOpen = true; activeBusToAudit = 'Bus #111'"
+                          class="w-full flex items-center justify-center gap-2 rounded-xl bg-brand-50 py-4 text-lg font-bold text-brand-600 transition-colors hover:bg-brand-100 dark:bg-brand-500/10 dark:text-brand-400 dark:hover:bg-brand-500/20">
+                          <i class="ph ph-image text-2xl"></i> View Photos (3)
+                        </button>
+                      </div>
+                      <div class="mt-2 flex gap-4">
+                        <button @click="status = 'approved'"
+                          class="flex-1 flex items-center justify-center rounded-xl bg-success-500 h-20 transition-colors hover:bg-success-600 shadow-sm"><i
+                            class="ph ph-check-circle text-5xl text-white"></i></button>
+                        <button @click="auditModalOpen = true; activeBusToAudit = 'Bus #111'"
+                          class="flex-1 flex items-center justify-center rounded-xl bg-error-50 h-20 border-2 border-error-200 transition-colors hover:bg-error-100 dark:bg-error-500/10 dark:border-error-500/30 dark:hover:bg-error-500/20 shadow-sm"><i
+                            class="ph ph-x-circle text-5xl text-error-600 dark:text-error-500"></i></button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Rejected / Hold Card 2 -->
+                  <div x-data="{ status: 'rejected' }" x-show="status === 'rejected'"
+                    class="overflow-hidden rounded-2xl border-2 border-error-500 bg-white shadow-sm dark:bg-gray-800">
+                    <div
+                      class="border-b border-error-100 bg-error-50 p-4 dark:border-error-900/50 dark:bg-error-500/10">
+                      <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                          <i class="ph ph-warning-circle text-xl text-error-600 dark:text-error-500"></i>
+                          <span class="font-bold text-error-800 dark:text-error-400">AUDIT FAILED - HOLD</span>
+                        </div>
+                        <span
+                          class="rounded bg-error-100 px-2.5 py-0.5 text-xs font-bold text-error-800 dark:bg-error-500/20 dark:text-error-400">Bay
+                          5</span>
+                      </div>
+                    </div>
+                    <div class="p-6">
+                      <div class="flex items-center justify-between mb-4">
+                        <div>
+                          <h4
+                            class="text-2xl font-black text-gray-900 dark:text-white flex flex-wrap items-center gap-3">
+                            Bus #202
+                            <span
+                              class="rounded-full shrink-0 whitespace-nowrap bg-purple-50 px-2 py-0.5 text-xs font-bold text-purple-600 dark:bg-purple-500/15 dark:text-purple-400 uppercase tracking-wider border border-purple-100 dark:border-purple-800">Overnight
+                              Clean</span>
+                          </h4>
+                          <p class="text-gray-500 mt-1 dark:text-gray-400">EV, Single Decker</p>
+                        </div>
+                        <div class="text-right">
+                          <p class="text-sm font-bold text-gray-700 dark:text-gray-300">Cleaned by:</p>
+                          <p class="text-gray-500 dark:text-gray-400">Lisa P. (Supervisor)</p>
+                        </div>
+                      </div>
+                      <div
+                        class="rounded-xl bg-gray-50 p-4 border border-gray-200 dark:bg-gray-900/50 dark:border-gray-700">
+                        <p class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Failure Reason:</p>
+                        <div class="flex gap-2">
+                          <span
+                            class="rounded bg-gray-200 px-3 py-1 text-sm font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-300"><i
+                              class="ph ph-wind mr-1"></i> Smell</span>
+                        </div>
+                      </div>
+                      <div class="mt-6 flex gap-3">
+                        <button @click="status = 'cleared'"
+                          class="flex-1 rounded-xl bg-success-500 py-3 font-bold text-white transition-colors hover:bg-success-600">Re-Audit:
+                          Pass</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Ready for QA Card 5 -->
+                  <div x-data="{ status: 'qa' }" x-show="status === 'qa'"
+                    class="overflow-hidden rounded-2xl border-2 border-warning-400 bg-white shadow-sm dark:border-warning-600 dark:bg-gray-800">
+                    <div
+                      class="border-b border-warning-100 bg-warning-50 p-4 dark:border-warning-900/50 dark:bg-warning-500/10">
+                      <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                          <i class="ph ph-clipboard-text text-xl text-warning-600 dark:text-warning-500"></i>
+                          <span class="font-bold text-warning-800 dark:text-warning-400">READY FOR QA</span>
+                        </div>
+                        <span
+                          class="rounded bg-warning-100 px-2.5 py-0.5 text-xs font-bold text-warning-800 dark:bg-warning-500/20 dark:text-warning-400">Bay
+                          9</span>
+                      </div>
+                    </div>
+                    <div class="p-6">
+                      <div class="flex items-center justify-between mb-4">
+                        <div>
+                          <h4
+                            class="text-2xl font-black text-gray-900 dark:text-white flex flex-wrap items-center gap-3">
+                            Bus #707
+                            <span
+                              class="rounded-full shrink-0 whitespace-nowrap bg-brand-50 px-2 py-0.5 text-xs font-bold text-brand-600 dark:bg-brand-500/15 dark:text-brand-500 uppercase tracking-wider border border-brand-100 dark:border-brand-800">Quick
+                              Clean</span>
+                          </h4>
+                          <p class="text-gray-500 mt-1 dark:text-gray-400">EV, Single Decker</p>
+                        </div>
+                        <div class="text-right">
+                          <p class="text-sm font-bold text-gray-700 dark:text-gray-300">Cleaned by:</p>
+                          <p class="text-gray-500 dark:text-gray-400">John D. (Supervisor)</p>
+                        </div>
+                      </div>
+                      <div class="flex items-center gap-4 mb-4">
+                        <div class="flex items-center gap-2">
+                          <i class="ph ph-timer text-gray-400"></i>
+                          <span class="text-sm text-gray-600 dark:text-gray-300">Time taken: <strong>07m 30s</strong>
+                            (SLA Met)</span>
+                        </div>
+                      </div>
+                      <div class="mb-6">
+                        <button @click="photoModalOpen = true; activeBusToAudit = 'Bus #707'"
+                          class="w-full flex items-center justify-center gap-2 rounded-xl bg-brand-50 py-4 text-lg font-bold text-brand-600 transition-colors hover:bg-brand-100 dark:bg-brand-500/10 dark:text-brand-400 dark:hover:bg-brand-500/20">
+                          <i class="ph ph-image text-2xl"></i> View Photos (3)
+                        </button>
+                      </div>
+                      <div class="mt-2 flex gap-4">
+                        <button @click="status = 'approved'"
+                          class="flex-1 flex items-center justify-center rounded-xl bg-success-500 h-20 transition-colors hover:bg-success-600 shadow-sm"><i
+                            class="ph ph-check-circle text-5xl text-white"></i></button>
+                        <button @click="auditModalOpen = true; activeBusToAudit = 'Bus #707'"
+                          class="flex-1 flex items-center justify-center rounded-xl bg-error-50 h-20 border-2 border-error-200 transition-colors hover:bg-error-100 dark:bg-error-500/10 dark:border-error-500/30 dark:hover:bg-error-500/20 shadow-sm"><i
+                            class="ph ph-x-circle text-5xl text-error-600 dark:text-error-500"></i></button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+
+
+              </div>
+            </div>
+          </div>
+
+          <!-- Depot Cleaning QA Tab -->
+          <div x-show="activeTab === 'depot_cleaning'" style="display: none;" class="space-y-6" x-data="{
+            depotSubmissions: [],
+            showRejectionModal: false,
+            activeSubToReject: null,
+            rejectionText: '',
+            loadDepotSubmissions() {
+              const stored = localStorage.getItem('depot_cleaning_submissions');
+              if (stored) {
+                this.depotSubmissions = JSON.parse(stored);
+              }
+            },
+            approveDepot(subId) {
+              const idx = this.depotSubmissions.findIndex(s => s.id === subId);
+              if (idx !== -1) {
+                this.depotSubmissions[idx].status = 'Approved';
+                this.depotSubmissions[idx].approvedAt = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                localStorage.setItem('depot_cleaning_submissions', JSON.stringify(this.depotSubmissions));
+                this.loadDepotSubmissions();
+                alert('Depot Cleaning Report Approved!');
+              }
+            },
+            rejectDepot() {
+              if (!this.rejectionText.trim()) {
+                alert('Please provide a reason for rejection.');
+                return;
+              }
+              const idx = this.depotSubmissions.findIndex(s => s.id === this.activeSubToReject);
+              if (idx !== -1) {
+                this.depotSubmissions[idx].status = 'Rejected';
+                this.depotSubmissions[idx].rejectedAt = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                this.depotSubmissions[idx].rejectionReason = this.rejectionText;
+                localStorage.setItem('depot_cleaning_submissions', JSON.stringify(this.depotSubmissions));
+                this.loadDepotSubmissions();
+                this.showRejectionModal = false;
+                this.rejectionText = '';
+                this.activeSubToReject = null;
+                alert('Depot Cleaning Report Rejected!');
+              }
+            }
+          }" x-init="loadDepotSubmissions(); $watch('activeTab', () => loadDepotSubmissions())">
+            
+            <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-4">Depot Cleaning QA Queue</h3>
+
+            <!-- Queue Cards -->
+            <div class="grid grid-cols-1 gap-6">
+              <template x-for="sub in depotSubmissions.filter(s => s.status === 'Pending')" :key="sub.id">
+                <div class="rounded-2xl border border-warning-200 bg-white p-6 shadow-sm dark:border-warning-900/30 dark:bg-gray-800">
+                  <div class="flex items-start justify-between gap-4 flex-col md:flex-row border-b border-gray-100 dark:border-gray-700 pb-4 mb-4">
+                    <div>
+                      <h4 class="text-lg font-bold text-gray-900 dark:text-white" x-text="sub.day + ', ' + sub.date"></h4>
+                      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Submitted at <span x-text="sub.submittedAt"></span> • ID: <span x-text="sub.id" class="font-bold"></span></p>
+                    </div>
+                    <span class="rounded-full bg-warning-100 px-3 py-1 text-xs font-bold text-warning-800 dark:bg-warning-500/20 dark:text-warning-400 uppercase">Pending Review</span>
+                  </div>
+
+                  <div class="space-y-4">
+                    <!-- Tasks Summary -->
+                    <div>
+                      <span class="text-xs uppercase font-bold text-gray-400 block mb-2">Category Completion</span>
+                      <div class="flex flex-wrap gap-4 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                        <span class="bg-gray-100 dark:bg-gray-700 px-2.5 py-1.5 rounded-lg">Tasks Cleaned: <strong x-text="sub.completedTasks + '/' + sub.totalTasks"></strong></span>
+                      </div>
+                    </div>
+
+                    <!-- Incomplete Flag -->
+                    <div x-show="sub.isIncomplete" class="rounded-xl bg-error-50 dark:bg-error-500/10 border border-error-100 dark:border-error-500/20 p-4">
+                      <span class="text-xs font-bold text-error-700 dark:text-error-400 block mb-1">INCOMPLETE CLEANING REPORTED</span>
+                      <p class="text-xs text-error-800 dark:text-error-300"><strong>Reasons:</strong> <span x-text="sub.reasons.join(', ') || 'None'"></span></p>
+                      <p x-show="sub.customProblem" class="text-xs text-error-800 dark:text-error-400 mt-1"><strong>Details:</strong> <span x-text="sub.customProblem"></span></p>
+                    </div>
+
+                    <!-- Photo Documentation if present -->
+                    <div x-show="Object.values(sub.photos || {}).flat().length > 0">
+                      <span class="text-xs uppercase font-bold text-gray-400 block mb-2">Submitted Photo Documentation</span>
+                      <div class="flex flex-wrap gap-3">
+                        <template x-for="img in Object.values(sub.photos || {}).flat()" :key="img">
+                          <div class="h-20 w-20 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
+                            <img :src="img" class="h-full w-full object-cover cursor-pointer hover:opacity-90 transition-opacity" @click="photoModalOpen = true; activeBusToAudit = img" />
+                          </div>
+                        </template>
+                      </div>
+                    </div>
+
+                    <!-- Approval/Rejection Actions -->
+                    <div class="flex gap-4 pt-2">
+                      <button @click="approveDepot(sub.id)" class="flex-1 flex items-center justify-center gap-2 rounded-xl bg-success-500 hover:bg-success-600 text-white py-3.5 font-bold transition-all shadow-sm">
+                        <i class="ph ph-check-circle text-xl"></i> Approve Report
+                      </button>
+                      <button @click="activeSubToReject = sub.id; showRejectionModal = true" class="flex-1 flex items-center justify-center gap-2 rounded-xl bg-error-50 hover:bg-error-100 border border-error-200 dark:bg-error-500/10 dark:border-error-500/20 dark:hover:bg-error-500/20 text-error-600 dark:text-error-400 py-3.5 font-bold transition-all">
+                        <i class="ph ph-x-circle text-xl"></i> Reject Report
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </template>
+
+              <!-- Queue Empty State -->
+              <div x-show="depotSubmissions.filter(s => s.status === 'Pending').length === 0" class="rounded-2xl border border-gray-200 bg-white p-12 text-center dark:border-gray-800 dark:bg-gray-800">
+                <i class="ph ph-check-circle text-4xl text-success-500 block mb-2"></i>
+                <p class="text-md font-bold text-gray-700 dark:text-gray-300">All Depot Cleaning Reports Audited!</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">There are no pending reports for fleet manager approval.</p>
+              </div>
+            </div>
+
+            <!-- Rejection Reason Modal -->
+            <div x-show="showRejectionModal" class="fixed inset-0 z-[999999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" style="display: none;">
+              <div @click.outside="showRejectionModal = false" class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Reject Depot Report</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Please provide reasons for rejecting today's cleaning log.</p>
+                <textarea x-model="rejectionText" rows="4" placeholder="Input failure reason (e.g. Bay 2 sweeps missing, dirty photos)..." class="w-full rounded-xl border border-gray-200 p-4 text-sm outline-none focus:border-error-500 dark:border-gray-800 dark:bg-gray-800 dark:text-white transition-colors mb-4"></textarea>
+                <div class="flex gap-4">
+                  <button @click="showRejectionModal = false; rejectionText = ''" class="flex-1 rounded-xl bg-gray-100 py-3 font-bold text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">Cancel</button>
+                  <button @click="rejectDepot()" class="flex-1 rounded-xl bg-error-500 py-3 font-bold text-white hover:bg-error-600 shadow-sm transition-colors">Submit Rejection</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Daily Cleaning History -->
+          <div x-show="activeTab === 'history'"
+            class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-800">
+            <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h3 class="text-lg font-bold text-gray-800 dark:text-white/90">Daily Cleaning History</h3>
+              <div class="flex items-center gap-2" x-data="{ selectedDate: new Date().toISOString().slice(0, 10) }">
+                <input type="date" x-model="selectedDate"
+                  class="h-10 rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 dark:border-gray-700 dark:text-white/90 focus:border-brand-500 focus:outline-hidden focus:ring-1 focus:ring-brand-500">
+              </div>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm text-gray-500 dark:text-gray-400">
+                <thead
+                  class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">
+                  <tr>
+                    <th scope="col" class="px-6 py-4">Bus ID</th>
+                    <th scope="col" class="px-6 py-4">Type</th>
+                    <th scope="col" class="px-6 py-4">Cleaning Type</th>
+                    <th scope="col" class="px-6 py-4">Cleaned By</th>
+                    <th scope="col" class="px-6 py-4">Time Taken</th>
+                    <th scope="col" class="px-6 py-4">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">Bus #102</td>
+                    <td class="px-6 py-4">EV, Single Decker</td>
+                    <td class="px-6 py-4"><span
+                        class="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-bold text-brand-600 dark:bg-brand-500/15 dark:text-brand-500 border border-brand-100 dark:border-brand-800">Quick
+                        Clean</span></td>
+                    <td class="px-6 py-4">Sarah M.</td>
+                    <td class="px-6 py-4">08m 15s</td>
+                    <td class="px-6 py-4"><span
+                        class="rounded bg-success-100 px-2.5 py-0.5 text-xs font-bold text-success-800 dark:bg-success-500/20 dark:text-success-400">QA
+                        Passed</span></td>
+                  </tr>
+                  <tr
+                    class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">Bus #822</td>
+                    <td class="px-6 py-4">ICE, Double Decker</td>
+                    <td class="px-6 py-4"><span
+                        class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-bold text-gray-600 dark:bg-gray-800 dark:text-gray-400 border border-gray-200 dark:border-gray-700">Deep
+                        Clean</span></td>
+                    <td class="px-6 py-4">John D.</td>
+                    <td class="px-6 py-4">02h 10m</td>
+                    <td class="px-6 py-4"><span
+                        class="rounded bg-success-100 px-2.5 py-0.5 text-xs font-bold text-success-800 dark:bg-success-500/20 dark:text-success-400">QA
+                        Passed</span></td>
+                  </tr>
+                  <tr
+                    class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">Bus #305</td>
+                    <td class="px-6 py-4">EV, Single Decker</td>
+                    <td class="px-6 py-4"><span
+                        class="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-bold text-brand-600 dark:bg-brand-500/15 dark:text-brand-500 border border-brand-100 dark:border-brand-800">Quick
+                        Clean</span></td>
+                    <td class="px-6 py-4">Mike R.</td>
+                    <td class="px-6 py-4 text-error-500 font-medium">14m 20s</td>
+                    <td class="px-6 py-4"><span
+                        class="rounded bg-success-100 px-2.5 py-0.5 text-xs font-bold text-success-800 dark:bg-success-500/20 dark:text-success-400">QA
+                        Passed</span></td>
+                  </tr>
+                  <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">Bus #150</td>
+                    <td class="px-6 py-4">ICE, Articulated</td>
+                    <td class="px-6 py-4"><span
+                        class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-bold text-gray-600 dark:bg-gray-800 dark:text-gray-400 border border-gray-200 dark:border-gray-700">Overnight
+                        Clean</span></td>
+                    <td class="px-6 py-4">Team Beta</td>
+                    <td class="px-6 py-4">45m 00s</td>
+                    <td class="px-6 py-4"><span
+                        class="rounded bg-success-100 px-2.5 py-0.5 text-xs font-bold text-success-800 dark:bg-success-500/20 dark:text-success-400">QA
+                        Passed</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Pagination (Mock) -->
+            <div class="mt-4 flex items-center justify-between border-t border-gray-200 pt-4 dark:border-gray-700">
+              <span class="text-sm text-gray-500 dark:text-gray-400">Showing <span
+                  class="font-bold text-gray-800 dark:text-white">1</span> to <span
+                  class="font-bold text-gray-800 dark:text-white">4</span> of <span
+                  class="font-bold text-gray-800 dark:text-white">126</span> vehicles</span>
+              <div class="flex gap-1">
+                <button
+                  class="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"><i
+                    class="ph ph-caret-left"></i></button>
+                <button
+                  class="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-brand-600 font-bold dark:bg-brand-500/10 dark:text-brand-400">1</button>
+                <button
+                  class="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700">2</button>
+                <button
+                  class="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700">3</button>
+                <button
+                  class="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"><i
+                    class="ph ph-caret-right"></i></button>
+              </div>
+            </div>
+          </div>
+        </div>
+    </div>
+    </main>
+    <!-- ===== Main Content End ===== -->
+  </div>
+  <!-- ===== Content Area End ===== -->
+  </div>
+  <!-- ===== Page Wrapper End ===== -->
+
+  <!-- Audit / Reject Modal -->
+  <!-- Photo Modal -->
+  <div x-show="photoModalOpen"
+    class="fixed inset-0 z-[999999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
+    style="display: none;">
+    <div @click.outside="photoModalOpen = false"
+      class="w-full max-w-2xl rounded-3xl bg-white p-6 shadow-2xl dark:bg-gray-900 md:p-8 my-8">
+      <div class="mb-6 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div
+            class="flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-500">
+            <i class="ph ph-image text-2xl"></i>
+          </div>
+          <div>
+            <h3 class="text-2xl font-black text-gray-900 dark:text-white" x-text="activeBusToAudit"></h3>
+            <p class="text-sm font-medium text-gray-500">Cleaning Log Photos</p>
+          </div>
+        </div>
+        <button @click="photoModalOpen = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          <i class="ph ph-x text-3xl"></i>
+        </button>
+      </div>
+
+      <div class="space-y-6">
+        <!-- Single Photo View (If it's an uploaded image link/data URL) -->
+        <template x-if="activeBusToAudit && (activeBusToAudit.startsWith('data:') || activeBusToAudit.includes('unsplash.com') || activeBusToAudit.includes('cloudinary'))">
+          <div class="rounded-2xl border border-gray-200 p-4 dark:border-gray-800">
+            <div class="w-full rounded-xl bg-gray-200 dark:bg-gray-800 overflow-hidden relative">
+              <img :src="activeBusToAudit" class="object-contain w-full max-h-[400px] mx-auto" alt="Report Photo">
+            </div>
+          </div>
+        </template>
+
+        <!-- Standard Bus Photo View -->
+        <template x-if="!activeBusToAudit || (!activeBusToAudit.startsWith('data:') && !activeBusToAudit.includes('unsplash.com') && !activeBusToAudit.includes('cloudinary'))">
+          <div class="space-y-6">
+            <!-- Floor Photo -->
+            <div class="rounded-2xl border border-gray-200 p-4 dark:border-gray-800">
+              <h4 class="font-bold text-gray-800 dark:text-white mb-3 flex items-center gap-2"><i
+                  class="ph ph-broom text-xl"></i> Floors Swept</h4>
+              <div
+                class="h-48 w-full rounded-xl bg-gray-200 dark:bg-gray-800 flex items-center justify-center overflow-hidden relative">
+                <img src="https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800&auto=format&fit=crop"
+                  class="object-cover w-full h-full opacity-80" alt="Floor">
+              </div>
+            </div>
+
+            <!-- Seats Photo -->
+            <div class="rounded-2xl border border-gray-200 p-4 dark:border-gray-800">
+              <h4 class="font-bold text-gray-800 dark:text-white mb-3 flex items-center gap-2"><i
+                  class="ph ph-armchair text-xl"></i> Seats Wiped</h4>
+              <div
+                class="h-48 w-full rounded-xl bg-gray-200 dark:bg-gray-800 flex items-center justify-center overflow-hidden relative">
+                <img src="https://images.unsplash.com/photo-1570125909232-eb263c188f7e?w=800&auto=format&fit=crop"
+                  class="object-cover w-full h-full opacity-80" alt="Seats">
+              </div>
+            </div>
+
+            <!-- Trash Photo -->
+            <div class="rounded-2xl border border-gray-200 p-4 dark:border-gray-800">
+              <h4 class="font-bold text-gray-800 dark:text-white mb-3 flex items-center gap-2"><i
+                  class="ph ph-trash text-xl"></i> Trash & Debris Removed</h4>
+              <div
+                class="h-48 w-full rounded-xl bg-gray-200 dark:bg-gray-800 flex items-center justify-center overflow-hidden relative">
+                <img src="https://images.unsplash.com/photo-1601569420364-7fc1fc4a43bb?w=800&auto=format&fit=crop"
+                  class="object-cover w-full h-full opacity-80" alt="Trash">
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <button @click="photoModalOpen = false"
+        class="mt-8 w-full rounded-xl bg-gray-800 py-4 text-lg font-extrabold text-white transition-colors hover:bg-gray-900 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white">
+        CLOSE PHOTOS
+      </button>
+    </div>
+  </div>
+
+  <!-- Audit / Reject Modal -->
+  <div x-show="auditModalOpen"
+    class="fixed inset-0 z-[999999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+    style="display: none;">
+    <div @click.outside="auditModalOpen = false"
+      class="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl dark:bg-gray-900 md:p-8">
+      <div class="mb-6 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div
+            class="flex h-12 w-12 items-center justify-center rounded-full bg-error-50 text-error-600 dark:bg-error-500/10 dark:text-error-500">
+            <i class="ph ph-warning text-2xl"></i>
+          </div>
+          <div>
+            <h3 class="text-2xl font-black text-gray-900 dark:text-white">Reject QA</h3>
+            <p class="text-sm font-medium text-gray-500" x-text="activeBusToAudit"></p>
+          </div>
+        </div>
+        <button @click="auditModalOpen = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          <i class="ph ph-x text-2xl"></i>
+        </button>
+      </div>
+
+      <p class="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Select reason for rejection (Quick-Tags):
+      </p>
+
+      <div class="grid grid-cols-2 gap-3 mb-6">
+        <!-- Tag -->
+        <button @click="quickTagSelected = 'trash'"
+          :class="quickTagSelected === 'trash' ? 'border-error-500 bg-error-50 text-error-700 dark:bg-error-500/20 dark:text-error-400' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'"
+          class="flex items-center justify-center gap-2 rounded-xl border-2 py-4 text-base font-bold transition-colors">
+          <i class="ph ph-trash text-xl"></i> Trash
+        </button>
+        <button @click="quickTagSelected = 'spill'"
+          :class="quickTagSelected === 'spill' ? 'border-error-500 bg-error-50 text-error-700 dark:bg-error-500/20 dark:text-error-400' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'"
+          class="flex items-center justify-center gap-2 rounded-xl border-2 py-4 text-base font-bold transition-colors">
+          <i class="ph ph-drop text-xl"></i> Spill
+        </button>
+        <button @click="quickTagSelected = 'smell'"
+          :class="quickTagSelected === 'smell' ? 'border-error-500 bg-error-50 text-error-700 dark:bg-error-500/20 dark:text-error-400' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'"
+          class="flex items-center justify-center gap-2 rounded-xl border-2 py-4 text-base font-bold transition-colors">
+          <i class="ph ph-wind text-xl"></i> Smell
+        </button>
+        <button @click="quickTagSelected = 'damage'"
+          :class="quickTagSelected === 'damage' ? 'border-error-500 bg-error-50 text-error-700 dark:bg-error-500/20 dark:text-error-400' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'"
+          class="flex items-center justify-center gap-2 rounded-xl border-2 py-4 text-base font-bold transition-colors">
+          <i class="ph ph-scissors text-xl"></i> Damage
+        </button>
+      </div>
+
+      <div class="mb-6">
+        <label class="mb-2 block text-sm font-bold text-gray-700 dark:text-gray-300">Additional Notes (Optional)</label>
+        <textarea rows="2"
+          class="w-full rounded-xl border border-gray-300 bg-gray-50 px-4 py-3 text-gray-800 focus:border-error-500 focus:ring-4 focus:ring-error-500/20 focus:outline-hidden dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-error-500"></textarea>
+      </div>
+
+      <button @click="auditModalOpen = false; quickTagSelected = null"
+        class="w-full rounded-xl bg-error-600 py-4 text-lg font-extrabold text-white transition-colors hover:bg-error-700">
+        CONFIRM REJECTION
+      </button>
+    </div>
+  </div>
+
+
+  <svg style="visibility: hidden; position: absolute;" width="0" height="0" xmlns="http://www.w3.org/2000/svg"
+    version="1.1">
+    <defs>
+      <filter id="goo" x="-50%" y="-50%" width="200%" height="300%">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
+        <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 19 -9" result="goo" />
+        <feComposite in="SourceGraphic" in2="goo" operator="atop" />
+      </filter>
+    </defs>
+  </svg>
+</body>
+
+</html>

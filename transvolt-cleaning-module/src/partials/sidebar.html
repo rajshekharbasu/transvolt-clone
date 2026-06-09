@@ -1,0 +1,310 @@
+<aside
+  :class="sidebarToggle ? 'translate-x-0 lg:w-[90px]' : '-translate-x-full'"
+  class="sidebar fixed left-0 top-0 z-[999999] flex h-screen w-[290px] flex-col overflow-y-hidden border-r border-gray-200 bg-white px-5 dark:border-gray-800 dark:bg-black lg:static lg:translate-x-0"
+>
+  <!-- Sidebar Header -->
+  <div
+    :class="sidebarToggle ? 'justify-center' : 'justify-between'"
+    class="flex items-center gap-2 pt-8 sidebar-header pb-7"
+  >
+    <!-- TransVolt Logo -->
+    <a href="index.html" class="flex items-center justify-center w-full">
+      <img :src="darkMode ? 'https://res.cloudinary.com/dmzhlzyqp/image/upload/v1779775358/Transvolt_Logo_1_sqxuhk.png' : 'https://res.cloudinary.com/dmzhlzyqp/image/upload/v1779711207/Transvolt_Logo_nejpai.png'" alt="TransVolt Logo" class="max-h-12 w-auto hidden lg:block" :class="sidebarToggle ? 'mx-auto max-h-8' : ''">
+    </a>
+  </div>
+  <!-- SIDEBAR HEADER -->
+
+  <div
+    class="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar"
+  >
+    <!-- Sidebar Menu -->
+    <nav x-data="{selected: $persist('Dashboard')}">
+      <div class="mt-4">
+
+        <ul class="flex flex-col gap-4 mb-6" x-data="{
+          initSortable() {
+            let loadSortable = () => {
+              Sortable.create(this.$el, {
+                animation: 150,
+                draggable: 'li',
+                delay: 150,
+                delayOnTouchOnly: true,
+                ghostClass: 'opacity-50',
+                onEnd: (evt) => {
+                  let order = Array.from(this.$el.querySelectorAll('li')).map(li => li.getAttribute('data-id'));
+                  localStorage.setItem('sidebarOrder', JSON.stringify(order));
+                }
+              });
+              
+              let order = JSON.parse(localStorage.getItem('sidebarOrder'));
+              if (order) {
+                let items = Array.from(this.$el.querySelectorAll('li'));
+                order.forEach(id => {
+                  let item = items.find(li => li.getAttribute('data-id') === id);
+                  if (item) this.$el.appendChild(item);
+                });
+              }
+            };
+
+            if (typeof Sortable === 'undefined') {
+              let script = document.createElement('script');
+              script.src = 'https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js';
+              script.onload = loadSortable;
+              document.head.appendChild(script);
+            } else {
+              loadSortable();
+            }
+          }
+        }" x-init="initSortable()">
+
+
+          <!-- Section Title: Cleaning -->
+          <h3 class="mb-4 mt-6 text-xs uppercase leading-[20px] text-gray-400">
+            <span class="menu-group-title" :class="sidebarToggle ? 'lg:hidden' : ''">
+              CLEANING
+            </span>
+          </h3>
+
+          <!-- Menu Item Head Office Management -->
+          <li data-id="headoffice">
+            <a
+              href="index.html"
+              @click="sidebarToggle = false; selected = (selected === 'HeadOffice' ? '':'HeadOffice')"
+              class="menu-item group"
+              :class=" (selected === 'HeadOffice') && (page === 'headoffice') ? 'menu-item-active' : 'menu-item-inactive'"
+            >
+              <svg
+                :class="(selected === 'HeadOffice') && (page === 'headoffice') ? 'menu-item-icon-active'  :'menu-item-icon-inactive'"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  fill-rule="evenodd"
+                  clip-rule="evenodd"
+                  d="M12 2C6.477 2 2 6.477 2 12C2 17.523 6.477 22 12 22C17.523 22 22 17.523 22 12C22 6.477 17.523 2 12 2ZM12 4C7.589 4 4 7.589 4 12C4 16.411 7.589 20 12 20C16.411 20 20 16.411 20 12C20 7.589 16.411 4 12 4ZM11 7V17H13V7H11ZM7 11V13H17V11H7Z"
+                  fill=""
+                />
+              </svg>
+              <span class="menu-item-text" :class="sidebarToggle ? 'lg:hidden' : ''">
+                Head Office
+              </span>
+            </a>
+          </li>
+          <!-- Menu Item Head Office Management -->
+
+          <!-- Menu Item Cleaning Operations -->
+          <li data-id="cleaningcrew">
+            <a
+              href="supervisor.html"
+              @click="sidebarToggle = false; selected = (selected === 'Cleaning' ? '':'Cleaning')"
+              class="menu-item group"
+              :class=" (selected === 'Cleaning') && (page === 'supervisor') ? 'menu-item-active' : 'menu-item-inactive'"
+            >
+              <svg
+                :class="(selected === 'Cleaning') && (page === 'supervisor') ? 'menu-item-icon-active'  :'menu-item-icon-inactive'"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  fill-rule="evenodd"
+                  clip-rule="evenodd"
+                  d="M10.25 4C10.25 3.0335 11.0335 2.25 12 2.25C12.9665 2.25 13.75 3.0335 13.75 4V10.25H20C20.9665 10.25 21.75 11.0335 21.75 12C21.75 12.9665 20.9665 13.75 20 13.75H13.75V20C13.75 20.9665 12.9665 21.75 12 21.75C11.0335 21.75 10.25 20.9665 10.25 20V13.75H4C3.0335 13.75 2.25 12.9665 2.25 12C2.25 11.0335 3.0335 10.25 4 10.25H10.25V4Z"
+                  fill=""
+                />
+              </svg>
+
+              <span
+                class="menu-item-text"
+                :class="sidebarToggle ? 'lg:hidden' : ''"
+              >
+                Cleaning Crew
+              </span>
+            </a>
+          </li>
+          <!-- Menu Item Cleaning Operations -->
+
+          <!-- Menu Item Depot Cleaning -->
+          <li data-id="depotcleaning">
+            <a
+              href="depot-cleaning.html"
+              @click="sidebarToggle = false; selected = (selected === 'DepotCleaning' ? '':'DepotCleaning')"
+              class="menu-item group"
+              :class=" (selected === 'DepotCleaning') && (page === 'depot-cleaning') ? 'menu-item-active' : 'menu-item-inactive'"
+            >
+              <svg
+                :class="(selected === 'DepotCleaning') && (page === 'depot-cleaning') ? 'menu-item-icon-active'  :'menu-item-icon-inactive'"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  fill-rule="evenodd"
+                  clip-rule="evenodd"
+                  d="M19.75 6V18C19.75 18.9665 18.9665 19.75 18 19.75H6C5.0335 19.75 4.25 18.9665 4.25 18V6C4.25 5.0335 5.0335 4.25 6 4.25H18C18.9665 4.25 19.75 5.0335 19.75 6ZM6 5.75C5.86193 5.75 5.75 5.86193 5.75 6V18C5.75 18.1381 5.86193 18.25 6 18.25H18C18.1381 18.25 18.25 18.1381 18.25 18V6C18.25 5.86193 18.1381 5.75 18 5.75H6Z"
+                  fill=""
+                />
+                <path
+                  fill-rule="evenodd"
+                  clip-rule="evenodd"
+                  d="M9.25 9.75C9.25 9.33579 9.58579 9 10 9H14C14.4142 9 14.75 9.33579 14.75 9.75C14.75 10.1642 14.4142 10.5 14 10.5H10C9.58579 10.5 9.25 10.1642 9.25 9.75Z"
+                  fill=""
+                />
+                <path
+                  fill-rule="evenodd"
+                  clip-rule="evenodd"
+                  d="M9.25 14.25C9.25 13.8358 9.58579 13.5 10 13.5H14C14.4142 13.5 14.75 13.8358 14.75 14.25C14.75 14.6642 14.4142 15 14 15H10C9.58579 15 9.25 14.6642 9.25 14.25Z"
+                  fill=""
+                />
+              </svg>
+
+              <span
+                class="menu-item-text"
+                :class="sidebarToggle ? 'lg:hidden' : ''"
+              >
+                Depot Cleaning
+              </span>
+            </a>
+          </li>
+          <!-- Menu Item Depot Cleaning -->
+
+          <!-- Menu Item Fines -->
+          <li data-id="fines">
+            <a
+              href="fines.html"
+              @click="sidebarToggle = false; selected = (selected === 'Fines' ? '':'Fines')"
+              class="menu-item group"
+              :class=" (selected === 'Fines') && (page === 'fines') ? 'menu-item-active' : 'menu-item-inactive'"
+            >
+              <i class="ph ph-currency-inr text-2xl" :class="(selected === 'Fines') && (page === 'fines') ? 'menu-item-icon-active'  :'menu-item-icon-inactive'"></i>
+
+              <span
+                class="menu-item-text"
+                :class="sidebarToggle ? 'lg:hidden' : ''"
+              >
+                Fines
+              </span>
+            </a>
+          </li>
+          <!-- Menu Item Fines -->
+          
+          <!-- Menu Item Fleet Manager -->
+          <li data-id="fleetmanager">
+            <a
+              href="manager.html"
+              @click="sidebarToggle = false; selected = (selected === 'Manager' ? '':'Manager')"
+              class="menu-item group"
+              :class=" (selected === 'Manager') && (page === 'manager') ? 'menu-item-active' : 'menu-item-inactive'"
+            >
+              <svg
+                :class="(selected === 'Manager') && (page === 'manager') ? 'menu-item-icon-active'  :'menu-item-icon-inactive'"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  fill-rule="evenodd"
+                  clip-rule="evenodd"
+                  d="M10.25 4C10.25 3.0335 11.0335 2.25 12 2.25C12.9665 2.25 13.75 3.0335 13.75 4V10.25H20C20.9665 10.25 21.75 11.0335 21.75 12C21.75 12.9665 20.9665 13.75 20 13.75H13.75V20C13.75 20.9665 12.9665 21.75 12 21.75C11.0335 21.75 10.25 20.9665 10.25 20V13.75H4C3.0335 13.75 2.25 12.9665 2.25 12C2.25 11.0335 3.0335 10.25 4 10.25H10.25V4Z"
+                  fill=""
+                />
+              </svg>
+
+              <span
+                class="menu-item-text"
+                :class="sidebarToggle ? 'lg:hidden' : ''"
+              >
+                Fleet Manager
+              </span>
+            </a>
+          </li>
+          <!-- Menu Item Fleet Manager -->
+
+          <!-- Menu Item Depot Manager -->
+          <li data-id="depotmanager">
+            <a
+              href="depot.html"
+              @click="sidebarToggle = false; selected = (selected === 'Depot' ? '':'Depot')"
+              class="menu-item group"
+              :class=" (selected === 'Depot') && (page === 'depot') ? 'menu-item-active' : 'menu-item-inactive'"
+            >
+              <svg
+                :class="(selected === 'Depot') && (page === 'depot') ? 'menu-item-icon-active'  :'menu-item-icon-inactive'"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  fill-rule="evenodd"
+                  clip-rule="evenodd"
+                  d="M4.25 10.75C4.25 10.1977 4.69772 9.75 5.25 9.75H18.75C19.3023 9.75 19.75 10.1977 19.75 10.75V19C19.75 20.2426 18.7426 21.25 17.5 21.25H6.5C5.25736 21.25 4.25 20.2426 4.25 19V10.75ZM6.5 11.25V19C6.5 19.4142 6.83579 19.75 7.25 19.75H16.75C17.1642 19.75 17.5 19.4142 17.5 19V11.25H6.5ZM12 4.75C11.5858 4.75 11.25 5.08579 11.25 5.5V8.25C11.25 8.66421 11.5858 9 12 9C12.4142 9 12.75 8.66421 12.75 8.25V5.5C12.75 5.08579 12.4142 4.75 12 4.75ZM8.25 2.75C8.25 2.19772 8.69772 1.75 9.25 1.75H14.75C15.3023 1.75 15.75 2.19772 15.75 2.75V8.25H8.25V2.75ZM9.75 3.25V6.75H14.25V3.25H9.75Z"
+                  fill=""
+                />
+              </svg>
+
+              <span
+                class="menu-item-text"
+                :class="sidebarToggle ? 'lg:hidden' : ''"
+              >
+                Depot Manager
+              </span>
+            </a>
+          </li>
+          <!-- Menu Item Depot Manager -->
+
+          <!-- Menu Item Calendar -->
+          <li data-id="calendar">
+            <a
+              href="calendar.html"
+              @click="sidebarToggle = false; selected = (selected === 'Calendar' ? '':'Calendar')"
+              class="menu-item group"
+              :class=" (selected === 'Calendar') && (page === 'calendar') ? 'menu-item-active' : 'menu-item-inactive'"
+            >
+              <svg
+                :class="(selected === 'Calendar') && (page === 'calendar') ? 'menu-item-icon-active'  :'menu-item-icon-inactive'"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  fill-rule="evenodd"
+                  clip-rule="evenodd"
+                  d="M8 2C8.41421 2 8.75 2.33579 8.75 2.75V3.75H15.25V2.75C15.25 2.33579 15.5858 2 16 2C16.4142 2 16.75 2.33579 16.75 2.75V3.75H18.5C19.7426 3.75 20.75 4.75736 20.75 6V9V19C20.75 20.2426 19.7426 21.25 18.5 21.25H5.5C4.25736 21.25 3.25 20.2426 3.25 19V9V6C3.25 4.75736 4.25736 3.75 5.5 3.75H7.25V2.75C7.25 2.33579 7.58579 2 8 2ZM8 5.25H5.5C5.08579 5.25 4.75 5.58579 4.75 6V8.25H19.25V6C19.25 5.58579 18.9142 5.25 18.5 5.25H16H8ZM19.25 9.75H4.75V19C4.75 19.4142 5.08579 19.75 5.5 19.75H18.5C18.9142 19.75 19.25 19.4142 19.25 19V9.75Z"
+                  fill=""
+                />
+              </svg>
+
+              <span
+                class="menu-item-text"
+                :class="sidebarToggle ? 'lg:hidden' : ''"
+              >
+                Calendar
+              </span>
+            </a>
+          </li>
+          <!-- Menu Item Calendar -->
+
+
+        </ul>
+      </div>
+
+
+    </nav>
+    <!-- Sidebar Menu -->
+
+
+  </div>
+</aside>

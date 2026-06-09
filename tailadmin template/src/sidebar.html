@@ -1,0 +1,142 @@
+<aside
+  :class="sidebarToggle ? 'translate-x-0 lg:w-[90px]' : '-translate-x-full'"
+  class="sidebar fixed left-0 top-0 z-9999 flex h-screen w-[290px] flex-col overflow-y-hidden border-r border-gray-200 bg-white px-5 dark:border-gray-800 dark:bg-black lg:static lg:translate-x-0"
+>
+  <!-- SIDEBAR HEADER -->
+  <div
+    :class="sidebarToggle ? 'justify-center' : 'justify-between'"
+    class="flex items-center gap-2 pt-8 sidebar-header pb-7"
+  >
+    <a href="index.html">
+      <span class="logo" :class="sidebarToggle ? 'hidden' : ''">
+        <img class="dark:hidden" src="https://res.cloudinary.com/dmzhlzyqp/image/upload/v1779711207/Transvolt_Logo_nejpai.png" alt="Logo" />
+        <img
+          class="hidden dark:block"
+          src="https://res.cloudinary.com/dmzhlzyqp/image/upload/v1779775358/Transvolt_Logo_1_sqxuhk.png"
+          alt="Logo"
+        />
+      </span>
+
+      <img
+        class="logo-icon"
+        :class="sidebarToggle ? 'lg:block' : 'hidden'"
+        src="./images/logo/logo-icon.svg"
+        alt="Logo"
+      />
+    </a>
+  </div>
+  <!-- SIDEBAR HEADER -->
+
+  <div
+    class="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar"
+  >
+    <!-- Sidebar Menu -->
+    <nav x-data="{selected: $persist('Dashboard')}">
+
+
+
+      <!-- Section Title: Cleaning -->
+      <div>
+        <h3 class="mb-4 mt-6 text-xs uppercase leading-[20px] text-gray-400">
+          <span class="menu-group-title" :class="sidebarToggle ? 'lg:hidden' : ''">
+            CLEANING
+          </span>
+        </h3>
+        <ul class="flex flex-col gap-4 mb-6">
+          <!-- Menu Item Head Office Management -->
+          <li>
+            <a
+              href="cleaning-head-office.html"
+              @click="selected = 'HeadOffice'"
+              class="menu-item group"
+              :class=" page === 'headoffice' ? 'menu-item-active' : 'menu-item-inactive'"
+            >
+              <i class="ph ph-buildings text-2xl" :class="page === 'headoffice' ? 'menu-item-icon-active' : 'menu-item-icon-inactive'"></i>
+              <span class="menu-item-text" :class="sidebarToggle ? 'lg:hidden' : ''">
+                Head Office
+              </span>
+            </a>
+          </li>
+
+          <!-- Menu Item Cleaning Operations -->
+          <li>
+            <a
+              href="supervisor.html"
+              @click="selected = 'Cleaning'"
+              class="menu-item group"
+              :class=" page === 'supervisor' ? 'menu-item-active' : 'menu-item-inactive'"
+            >
+              <i class="ph ph-users-three text-2xl" :class="page === 'supervisor' ? 'menu-item-icon-active' : 'menu-item-icon-inactive'"></i>
+              <span class="menu-item-text" :class="sidebarToggle ? 'lg:hidden' : ''">
+                Cleaning Crew
+              </span>
+            </a>
+          </li>
+
+          <!-- Menu Item Depot Cleaning -->
+          <li>
+            <a
+              href="depot-cleaning.html"
+              @click="selected = 'DepotCleaning'"
+              class="menu-item group"
+              :class=" page === 'depot-cleaning' ? 'menu-item-active' : 'menu-item-inactive'"
+            >
+              <i class="ph ph-spray-bottle text-2xl" :class="page === 'depot-cleaning' ? 'menu-item-icon-active' : 'menu-item-icon-inactive'"></i>
+              <span class="menu-item-text" :class="sidebarToggle ? 'lg:hidden' : ''">
+                Depot Cleaning
+              </span>
+            </a>
+          </li>
+
+          <!-- Menu Item Fines -->
+          <li>
+            <a
+              href="fines.html"
+              @click="selected = 'Fines'"
+              class="menu-item group"
+              :class=" page === 'fines' ? 'menu-item-active' : 'menu-item-inactive'"
+            >
+              <i class="ph ph-currency-inr text-2xl" :class="page === 'fines' ? 'menu-item-icon-active' : 'menu-item-icon-inactive'"></i>
+              <span class="menu-item-text" :class="sidebarToggle ? 'lg:hidden' : ''">
+                Fines
+              </span>
+            </a>
+          </li>
+          
+          <!-- Menu Item Fleet Manager -->
+          <li>
+            <a
+              href="manager.html"
+              @click="selected = 'Manager'"
+              class="menu-item group"
+              :class=" page === 'manager' ? 'menu-item-active' : 'menu-item-inactive'"
+            >
+              <i class="ph ph-bus text-2xl" :class="page === 'manager' ? 'menu-item-icon-active' : 'menu-item-icon-inactive'"></i>
+              <span class="menu-item-text" :class="sidebarToggle ? 'lg:hidden' : ''">
+                Fleet Manager
+              </span>
+            </a>
+          </li>
+
+          <!-- Menu Item Depot Manager -->
+          <li>
+            <a
+              href="depot.html"
+              @click="selected = 'Depot'"
+              class="menu-item group"
+              :class=" page === 'depot' ? 'menu-item-active' : 'menu-item-inactive'"
+            >
+              <i class="ph ph-garage text-2xl" :class="page === 'depot' ? 'menu-item-icon-active' : 'menu-item-icon-inactive'"></i>
+              <span class="menu-item-text" :class="sidebarToggle ? 'lg:hidden' : ''">
+                Depot Manager
+              </span>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </nav>
+    <!-- Sidebar Menu -->
+
+
+  </div>
+</aside>

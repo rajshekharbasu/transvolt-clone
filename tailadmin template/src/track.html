@@ -1,0 +1,625 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
+    />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Track | TransVolt</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  </head>
+  <body
+    x-data="{ page: 'track', 'loaded': true, 'darkMode': false, 'stickyMenu': false, 'sidebarToggle': false, 'scrollTop': false }"
+    x-init="
+         darkMode = JSON.parse(localStorage.getItem('darkMode'));
+         $watch('darkMode', value => localStorage.setItem('darkMode', JSON.stringify(value)))"
+    :class="{'dark bg-gray-900': darkMode === true}"
+  >
+    <!-- ===== Preloader Start ===== -->
+    <include src="./partials/preloader.html"></include>
+    <!-- ===== Preloader End ===== -->
+
+    <!-- ===== Page Wrapper Start ===== -->
+    <div class="flex h-screen overflow-hidden">
+      <!-- ===== Sidebar Start ===== -->
+      <include src="./partials/sidebar.html"></include>
+      <!-- ===== Sidebar End ===== -->
+
+      <!-- ===== Content Area Start ===== -->
+      <div
+        class="relative flex flex-col flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900"
+      >
+        <!-- Small Device Overlay Start -->
+        <include src="./partials/overlay.html" />
+        <!-- Small Device Overlay End -->
+
+        <!-- ===== Header Start ===== -->
+        <include src="./partials/header.html" />
+        <!-- ===== Header End ===== -->
+
+        <!-- ===== Main Content Start ===== -->
+        <main x-data="trackApp()" x-init="initApp()">
+          <div class="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6 flex flex-col gap-4">
+            
+            <!-- Breadcrumbs -->
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h2 class="text-title-md2 font-bold text-gray-800 dark:text-white/90">Track</h2>
+            </div>
+
+            <!-- Filters Bar -->
+            <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
+              <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-4 justify-between">
+                
+                <!-- Search Input -->
+                <div class="flex-1 max-w-xl relative">
+                  <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                    <i class="ph ph-magnifying-glass text-lg"></i>
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Search by registration number…"
+                    x-model="searchQuery"
+                    class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10 bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none transition-colors"
+                  />
+                </div>
+
+                <!-- Vendor Dropdown -->
+                <div class="flex flex-col min-w-40">
+                  <label class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Vendor</label>
+                  <select
+                    x-model="selectedVendor"
+                    class="border border-gray-300 dark:border-gray-700 rounded-lg text-sm px-3 py-2 bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10 outline-none transition-colors cursor-pointer"
+                  >
+                    <option value="">All Vendors</option>
+                    <option value="Intangles">Intangles</option>
+                    <option value="EKA">EKA</option>
+                    <option value="IPLT">IPLT</option>
+                  </select>
+                </div>
+
+                <!-- SPV Dropdown -->
+                <div class="flex flex-col min-w-40">
+                  <label class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Fleet Group (SPV)</label>
+                  <select
+                    x-model="selectedSpv"
+                    class="border border-gray-300 dark:border-gray-700 rounded-lg text-sm px-3 py-2 bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10 outline-none transition-colors cursor-pointer"
+                  >
+                    <option value="">All SPVs</option>
+                    <option value="MBMT">MBMT</option>
+                    <option value="Nagpur">Nagpur</option>
+                  </select>
+                </div>
+
+                <!-- Site Dropdown -->
+                <div class="flex flex-col min-w-40">
+                  <label class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Site</label>
+                  <select
+                    x-model="selectedSiteId"
+                    @change="handleSiteChange($event)"
+                    class="border border-gray-300 dark:border-gray-700 rounded-lg text-sm px-3 py-2 bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10 outline-none transition-colors cursor-pointer"
+                  >
+                    <option value="all">All Sites</option>
+                    <template x-for="site in sites" :key="site.id">
+                      <option :value="site.id" x-text="site.name"></option>
+                    </template>
+                  </select>
+                </div>
+
+                <!-- Live Units Badge -->
+                <div class="flex items-center gap-2 bg-brand-500/10 dark:bg-brand-500/10 px-4 py-2.5 rounded-lg border border-brand-500/20 dark:border-brand-500/20 shrink-0 self-end lg:self-center h-10">
+                  <div class="w-2.5 h-2.5 rounded-full bg-brand-500 animate-pulse"></div>
+                  <span class="text-xl font-black text-brand-600 dark:text-brand-400 leading-none" x-text="filteredVehicles.length">0</span>
+                  <span class="text-xs font-bold text-brand-500/70 dark:text-brand-400/70 uppercase tracking-wide">Live Units</span>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Stats KPIs Row -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <!-- Total Vehicles -->
+              <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-white/[0.03]">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="w-2 h-2 rounded-full bg-brand-500"></span>
+                  <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Total Vehicles</span>
+                </div>
+                <span class="text-2xl font-bold text-gray-800 dark:text-white/90" x-text="stats.total">0</span>
+              </div>
+              <!-- Moving -->
+              <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-white/[0.03]">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="w-2 h-2 rounded-full bg-success-500"></span>
+                  <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Moving</span>
+                </div>
+                <span class="text-2xl font-bold text-gray-800 dark:text-white/90" x-text="stats.moving">0</span>
+              </div>
+              <!-- Idle -->
+              <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-white/[0.03]">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="w-2 h-2 rounded-full bg-gray-400"></span>
+                  <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Idle</span>
+                </div>
+                <span class="text-2xl font-bold text-gray-800 dark:text-white/90" x-text="stats.idle">0</span>
+              </div>
+              <!-- Charging -->
+              <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-white/[0.03]">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="w-2 h-2 rounded-full bg-warning-500"></span>
+                  <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Charging</span>
+                </div>
+                <span class="text-2xl font-bold text-gray-800 dark:text-white/90" x-text="stats.charging">0</span>
+              </div>
+            </div>
+
+            <!-- Map and Sidebar Container -->
+            <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] overflow-hidden">
+              <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <h3 class="text-sm font-semibold text-gray-800 dark:text-white/90">Live Map</h3>
+                  <div x-show="gpsError" class="flex items-center gap-2 px-3 py-1 bg-error-50 dark:bg-error-500/10 text-xs text-error-600 dark:text-error-400 rounded-lg" style="display: none;">
+                    <i class="ph ph-warning"></i>
+                    <span x-text="gpsError">Vehicle data may be stale</span>
+                  </div>
+                </div>
+                <!-- Toggle Sidebar Button -->
+                <button
+                  type="button"
+                  @click="isSidebarOpen = !isSidebarOpen"
+                  class="flex items-center justify-center w-8 h-8 rounded-lg text-brand-500 hover:bg-brand-50 dark:hover:bg-brand-500/10 transition-colors"
+                >
+                  <i class="ph text-xl" :class="isSidebarOpen ? 'ph-caret-left' : 'ph-list-bullets'"></i>
+                </button>
+              </div>
+
+              <div class="flex relative h-[600px]">
+                
+                <!-- Vehicles List Sidebar -->
+                <div
+                  x-show="isSidebarOpen"
+                  class="w-[320px] shrink-0 border-r border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 flex flex-col overflow-hidden transition-all duration-300 absolute inset-y-0 left-0 z-999 lg:static"
+                  x-transition:enter="transition ease-out duration-200"
+                  x-transition:enter-start="-translate-x-full"
+                  x-transition:enter-end="translate-x-0"
+                  x-transition:leave="transition ease-in duration-150"
+                  x-transition:leave-start="translate-x-0"
+                  x-transition:leave-end="-translate-x-full"
+                >
+                  <div class="overflow-y-auto custom-scrollbar flex-1">
+                    <template x-for="v in filteredVehicles" :key="v.registration_number">
+                      <button
+                        type="button"
+                        @click="focusVehicle(v)"
+                        class="w-full flex items-center justify-between px-4 py-3.5 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left"
+                      >
+                        <div class="flex flex-col gap-0.5">
+                          <span class="text-sm font-bold text-gray-800 dark:text-white/90" x-text="v.registration_number"></span>
+                          <span class="text-xs text-gray-400" x-text="v.speed + ' km/h'"></span>
+                        </div>
+                        <span
+                          class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                          :class="v.speed > 0 ? 'bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-500' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'"
+                          x-text="v.speed > 0 ? 'Moving' : 'Idle'"
+                        ></span>
+                      </button>
+                    </template>
+                    <div x-show="filteredVehicles.length === 0" class="flex items-center justify-center h-32 text-gray-400 text-sm">
+                      No vehicles found
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Leaflet Map Canvas -->
+                <div class="flex-1 relative h-full">
+                  <div id="map-canvas" class="w-full h-full z-1"></div>
+                  
+                  <!-- Map Style Controls overlay -->
+                  <div class="absolute bottom-3 right-3 z-999 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-1.5 flex gap-1">
+                    <template x-for="layer in mapLayers" :key="layer.key">
+                      <button
+                        @click="setMapLayer(layer.key)"
+                        class="rounded-lg px-2.5 py-1.5 text-xs font-bold transition-colors"
+                        :class="mapLayer === layer.key ? 'bg-brand-500 text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'"
+                        x-text="layer.label"
+                      ></button>
+                    </template>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+        </main>
+        <!-- ===== Main Content End ===== -->
+      </div>
+      <!-- ===== Content Area End ===== -->
+    </div>
+    <!-- ===== Page Wrapper End ===== -->
+
+    <!-- Leaflet JS CDN -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <!-- Alpine JS Track Component Logic -->
+    <script>
+      function trackApp() {
+        return {
+          searchQuery: '',
+          selectedVendor: '',
+          selectedSpv: '',
+          selectedSiteId: 'all',
+          isSidebarOpen: true,
+          gpsError: null,
+          map: null,
+          mapLayer: 'google_roadmap',
+          mapLayers: [
+            { label: 'OSM', key: 'osm' },
+            { label: 'Roads', key: 'google_roadmap' },
+            { label: 'Satellite', key: 'google_satellite' },
+            { label: 'Hybrid', key: 'google_hybrid' }
+          ],
+          tileLayer: null,
+          markersGroup: null,
+          vehicleMarkers: {},
+          siteMarkers: {},
+          sites: [
+            { id: "e56d3782-6c9c-4c03-87e6-9dfe64ee8140", name: "Ghodbandar1", latitude: 19.2941, longitude: 72.8712, site_type: "MINE", location: "Mira-Bhayandar" },
+            { id: "f4d5ec01-dd49-4696-9e7a-dbf911765147", name: "Ghodbandar", latitude: 19.2812, longitude: 72.8554, site_type: "MINE", location: "Mira-Bhayandar" },
+            { id: "9e3d2fdf-53f5-472e-8afd-7f59a6fe9af9", name: "Test Site 1", latitude: 21.1458, longitude: 79.0882, site_type: "DEPOT", location: "Nagpur" },
+            { id: "d0538eea-5226-43d6-ad4b-f3efd18cbd71", name: "Test Site 2", latitude: 21.1204, longitude: 79.1203, site_type: "DEPOT", location: "Nagpur" }
+          ],
+          vehicles: [
+            // MBMT Fleet (around Ghodbandar)
+            { registration_number: "MH-04-GP-1001", latitude: 19.2930, longitude: 72.8700, speed: 45, charging_status: 0, vendor: "EKA", spv: "MBMT" },
+            { registration_number: "MH-04-GP-1002", latitude: 19.2820, longitude: 72.8540, speed: 0, charging_status: 0, vendor: "Intangles", spv: "MBMT" },
+            { registration_number: "MH-04-GP-1003", latitude: 19.2950, longitude: 72.8680, speed: 0, charging_status: 1, vendor: "IPLT", spv: "MBMT" },
+            { registration_number: "MH-04-GP-1004", latitude: 19.2880, longitude: 72.8610, speed: 32, charging_status: 0, vendor: "EKA", spv: "MBMT" },
+            // Nagpur Fleet
+            { registration_number: "MH-31-EK-2001", latitude: 21.1450, longitude: 79.0870, speed: 52, charging_status: 0, vendor: "Intangles", spv: "Nagpur" },
+            { registration_number: "MH-31-EK-2002", latitude: 21.1210, longitude: 79.1190, speed: 0, charging_status: 0, vendor: "EKA", spv: "Nagpur" },
+            { registration_number: "MH-31-EK-2003", latitude: 21.1460, longitude: 79.0890, speed: 0, charging_status: 1, vendor: "IPLT", spv: "Nagpur" },
+            { registration_number: "MH-31-EK-2004", latitude: 21.1350, longitude: 79.0980, speed: 40, charging_status: 0, vendor: "Intangles", spv: "Nagpur" },
+            { registration_number: "MH-31-EK-2005", latitude: 21.1290, longitude: 79.1050, speed: 28, charging_status: 0, vendor: "EKA", spv: "Nagpur" },
+            { registration_number: "MH-31-EK-2006", latitude: 21.1410, longitude: 79.1120, speed: 0, charging_status: 0, vendor: "IPLT", spv: "Nagpur" }
+          ],
+          
+          get filteredVehicles() {
+            return this.vehicles.filter(v => {
+              const matchesSearch = v.registration_number.toLowerCase().includes(this.searchQuery.toLowerCase());
+              const matchesVendor = !this.selectedVendor || v.vendor === this.selectedVendor;
+              const matchesSpv = !this.selectedSpv || v.spv === this.selectedSpv;
+              
+              let matchesSite = true;
+              if (this.selectedSiteId !== 'all') {
+                const site = this.sites.find(s => s.id === this.selectedSiteId);
+                if (site) {
+                  // Filter vehicles that are closer to the selected site (simple distance check)
+                  const distance = Math.sqrt(Math.pow(v.latitude - site.latitude, 2) + Math.pow(v.longitude - site.longitude, 2));
+                  matchesSite = distance < 0.1; // roughly 10km radius
+                }
+              }
+              
+              return matchesSearch && matchesVendor && matchesSpv && matchesSite;
+            });
+          },
+
+          get stats() {
+            const list = this.filteredVehicles;
+            return {
+              total: list.length,
+              moving: list.filter(v => v.speed > 0).length,
+              idle: list.filter(v => v.speed === 0 && v.charging_status === 0).length,
+              charging: list.filter(v => v.charging_status === 1).length
+            };
+          },
+
+          initApp() {
+            // Watch changes in filtered arrays and redraw markers
+            this.$watch('searchQuery', () => this.drawMarkers());
+            this.$watch('selectedVendor', () => this.drawMarkers());
+            this.$watch('selectedSpv', () => this.drawMarkers());
+            this.$watch('selectedSiteId', () => this.drawMarkers());
+          },
+
+          initMap() {
+            if (this.map) return;
+
+            // Map init centered on India overview
+            this.map = L.map('map-canvas', {
+              zoomControl: true
+            }).setView([20.5937, 78.9629], 5);
+
+            this.setMapLayer(this.mapLayer);
+
+            this.markersGroup = L.layerGroup().addTo(this.map);
+            this.drawMarkers();
+
+            // Run moving simulation loop
+            setInterval(() => {
+              this.simulateMotion();
+            }, 4000);
+          },
+
+          setMapLayer(key) {
+            this.mapLayer = key;
+            if (this.tileLayer) {
+              this.map.removeLayer(this.tileLayer);
+            }
+
+            let url = '';
+            let config = {};
+
+            if (key === 'osm') {
+              url = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+              config = {
+                attribution: '&copy; OpenStreetMap contributors'
+              };
+            } else if (key === 'google_roadmap') {
+              url = 'https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}';
+              config = {
+                subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+                attribution: '&copy; Google Maps'
+              };
+            } else if (key === 'google_satellite') {
+              url = 'https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}';
+              config = {
+                subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+                attribution: '&copy; Google Maps'
+              };
+            } else if (key === 'google_hybrid') {
+              url = 'https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}';
+              config = {
+                subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+                attribution: '&copy; Google Maps'
+              };
+            }
+
+            this.tileLayer = L.tileLayer(url, config).addTo(this.map);
+          },
+
+          drawMarkers() {
+            if (!this.map || !this.markersGroup) return;
+
+            // Prevent drawing/modifying layers during zoom animations to avoid Leaflet errors
+            if (this.map._animatingZoom) {
+              this.map.once('zoomend', () => this.drawMarkers());
+              return;
+            }
+
+            const isDark = document.documentElement.classList.contains('dark');
+            const popupBg = isDark ? '#1d2939' : '#ffffff';
+            const popupColor = isDark ? '#f9fafb' : '#101828';
+            const popupBorder = isDark ? '#344054' : '#eaecf0';
+
+            // Custom Leaflet Icons
+            const siteIcon = L.divIcon({
+              html: `<div style="
+                background-color: #7c3aed;
+                width: 16px;
+                height: 16px;
+                border-radius: 50%;
+                border: 2px solid white;
+                box-shadow: 0 0 8px rgba(124, 58, 237, 0.7);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              "><div style="width: 4px; height: 4px; background-color: white; border-radius: 50%;"></div></div>`,
+              className: 'site-marker-icon',
+              iconSize: [16, 16],
+              iconAnchor: [8, 8]
+            });
+
+            // 1. Draw/update filtered sites
+            const activeSiteIds = new Set();
+            this.sites.forEach(site => {
+              if (this.selectedSiteId !== 'all' && site.id !== this.selectedSiteId) return;
+              activeSiteIds.add(site.id);
+
+              const popupHtml = `
+                <div style="min-width: 180px; padding: 4px; background-color: ${popupBg}; color: ${popupColor}; font-family: Outfit, sans-serif;">
+                  <h4 style="margin: 0; font-size: 14px; font-weight: 700; color: inherit;">${site.name}</h4>
+                  <p style="margin: 4px 0 0 0; font-size: 12px; color: ${isDark ? '#98a2b3' : '#667085'};">${site.location}</p>
+                  <div style="margin-top: 8px; border-top: 1px solid ${popupBorder}; padding-top: 6px; font-size: 10px; text-transform: uppercase; font-weight: 600; color: ${isDark ? '#667085' : '#98a2b3'}">
+                    Type: ${site.site_type}
+                  </div>
+                </div>
+              `;
+
+              let marker = this.siteMarkers[site.id];
+              if (marker) {
+                marker.setLatLng([site.latitude, site.longitude]);
+                marker.setPopupContent(popupHtml);
+                if (!this.markersGroup.hasLayer(marker)) {
+                  marker.addTo(this.markersGroup);
+                }
+              } else {
+                marker = L.marker([site.latitude, site.longitude], { icon: siteIcon })
+                  .bindPopup(popupHtml);
+                marker.addTo(this.markersGroup);
+                this.siteMarkers[site.id] = marker;
+              }
+            });
+
+            // Remove site markers that are no longer active
+            Object.keys(this.siteMarkers).forEach(siteId => {
+              if (!activeSiteIds.has(siteId)) {
+                const marker = this.siteMarkers[siteId];
+                if (this.markersGroup.hasLayer(marker)) {
+                  this.markersGroup.removeLayer(marker);
+                }
+              }
+            });
+
+            // 2. Draw/update filtered vehicles
+            const activeRegNumbers = new Set();
+            this.filteredVehicles.forEach(v => {
+              activeRegNumbers.add(v.registration_number);
+
+              const color = v.speed > 0 ? '#10b981' : (v.charging_status === 1 ? '#f59e0b' : '#9ca3af');
+              const shadow = v.speed > 0 ? 'rgba(16, 185, 129, 0.6)' : (v.charging_status === 1 ? 'rgba(245, 158, 11, 0.6)' : 'rgba(156, 163, 175, 0.6)');
+              
+              const vIcon = L.divIcon({
+                html: `<div style="
+                  background-color: ${color};
+                  width: 14px;
+                  height: 14px;
+                  border-radius: 50%;
+                  border: 2px solid white;
+                  box-shadow: 0 0 8px ${shadow};
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                "><div style="width: 4px; height: 4px; background-color: white; border-radius: 50%;"></div></div>`,
+                className: 'vehicle-marker-icon',
+                iconSize: [14, 14],
+                iconAnchor: [7, 7]
+              });
+
+              const popupHtml = `
+                <div style="min-width: 200px; padding: 4px; background-color: ${popupBg}; color: ${popupColor}; font-family: Outfit, sans-serif;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <h4 style="margin: 0; font-size: 14px; font-weight: 700; color: inherit;">${v.registration_number}</h4>
+                    <span style="font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 99px; background-color: ${v.speed > 0 ? 'rgba(16,185,129,0.15)' : 'rgba(156,163,175,0.15)'}; color: ${v.speed > 0 ? '#10b981' : '#9ca3af'}">
+                      ${v.speed > 0 ? 'Moving' : 'Idle'}
+                    </span>
+                  </div>
+                  <div style="display: grid; grid-template-cols: 1fr 1fr; gap: 8px; font-size: 11px;">
+                    <div>
+                      <span style="color: ${isDark ? '#98a2b3' : '#667085'}; display: block;">Speed</span>
+                      <strong style="font-size: 12px;">${v.speed} km/h</strong>
+                    </div>
+                    <div>
+                      <span style="color: ${isDark ? '#98a2b3' : '#667085'}; display: block;">Status</span>
+                      <strong style="font-size: 12px;">${v.charging_status === 1 ? 'Charging' : 'Normal'}</strong>
+                    </div>
+                    <div style="grid-column: span 2; border-top: 1px solid ${popupBorder}; padding-top: 6px;">
+                      <span style="color: ${isDark ? '#98a2b3' : '#667085'}; display: block;">Fleet Group</span>
+                      <strong>${v.spv} (Vendor: ${v.vendor})</strong>
+                    </div>
+                  </div>
+                </div>
+              `;
+
+              let marker = this.vehicleMarkers[v.registration_number];
+              if (marker) {
+                marker.setLatLng([v.latitude, v.longitude]);
+                marker.setIcon(vIcon);
+                marker.setPopupContent(popupHtml);
+                if (!this.markersGroup.hasLayer(marker)) {
+                  marker.addTo(this.markersGroup);
+                }
+              } else {
+                marker = L.marker([v.latitude, v.longitude], { icon: vIcon })
+                  .bindPopup(popupHtml);
+                marker.addTo(this.markersGroup);
+                this.vehicleMarkers[v.registration_number] = marker;
+              }
+            });
+
+            // Remove vehicle markers that are no longer active
+            Object.keys(this.vehicleMarkers).forEach(regNum => {
+              if (!activeRegNumbers.has(regNum)) {
+                const marker = this.vehicleMarkers[regNum];
+                if (this.markersGroup.hasLayer(marker)) {
+                  this.markersGroup.removeLayer(marker);
+                }
+              }
+            });
+          },
+
+          focusVehicle(v) {
+            if (!this.map) return;
+            this.map.setView([v.latitude, v.longitude], 15);
+            
+            // Find and open vehicle marker popup
+            this.markersGroup.eachLayer(layer => {
+              if (layer instanceof L.Marker) {
+                const latLng = layer.getLatLng();
+                if (latLng.lat === v.latitude && latLng.lng === v.longitude) {
+                  layer.openPopup();
+                }
+              }
+            });
+          },
+
+          handleSiteChange(e) {
+            const id = e.target.value;
+            if (id === 'all') {
+              this.map.setView([20.5937, 78.9629], 5);
+            } else {
+              const site = this.sites.find(s => s.id === id);
+              if (site) {
+                this.map.setView([site.latitude, site.longitude], 13);
+              }
+            }
+          },
+
+          simulateMotion() {
+            // Move active vehicles slightly to simulate tracking updates
+            this.vehicles.forEach(v => {
+              if (v.speed > 0) {
+                // slightly randomize latitude/longitude walking
+                v.latitude += (Math.random() - 0.5) * 0.0015;
+                v.longitude += (Math.random() - 0.5) * 0.0015;
+                // randomize speed slightly
+                v.speed = Math.max(10, Math.min(80, Math.floor(v.speed + (Math.random() - 0.5) * 10)));
+              }
+            });
+            this.drawMarkers();
+          },
+
+          async fetchRealSites() {
+            const token = sessionStorage.getItem("AuthToken") ? JSON.parse(sessionStorage.getItem("AuthToken")).token : null;
+            if (!token) return;
+
+            try {
+              const res = await fetch("https://dev-siteops-platform.transvolt.org/api/v1/onboarding/sites", {
+                headers: { "Authorization": `Bearer ${token}` }
+              });
+              if (res.ok) {
+                const data = await res.json();
+                if (data && data.data) {
+                  // Map coordinates to sites if they exist, else we keep the coordinates
+                  this.sites = data.data.map((site, index) => {
+                    // Assign coordinate offsets relative to depots if not present in API
+                    const isNagpur = site.project_name !== 'MBMT';
+                    const baseLat = isNagpur ? 21.1458 : 19.2941;
+                    const baseLng = isNagpur ? 79.0882 : 72.8712;
+                    return {
+                      id: site.id,
+                      name: site.name,
+                      latitude: baseLat + (index * 0.02) - 0.05,
+                      longitude: baseLng + (index * 0.02) - 0.05,
+                      site_type: site.code,
+                      location: site.location || 'India'
+                    };
+                  });
+                }
+              }
+            } catch (err) {
+              console.error("Failed to fetch sites from API, using fallback coordinates:", err);
+            }
+          }
+        };
+      }
+
+      // Late map initialization helper when element is mounted
+      document.addEventListener("DOMContentLoaded", () => {
+        setTimeout(() => {
+          const main = document.querySelector('main');
+          if (main) {
+            const app = Alpine.$data(main);
+            if (app && typeof app.initMap === 'function') {
+              app.initMap();
+              app.fetchRealSites();
+            }
+          }
+        }, 800);
+      });
+    </script>
+  </body>
+</html>
