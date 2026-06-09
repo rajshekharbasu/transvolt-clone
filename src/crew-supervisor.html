@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport"
+    content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+  <title>
+    Crew Supervisor Overview | TransVolt
+  </title>
+  <!-- Phosphor Icons for large, accessible iconography -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <style>
+    /* Ensure file inputs are fully hidden but functional via labels */
+    input[type="file"] {
+      display: none;
+    }
+  </style>
+</head>
+
+<body x-data="{ 
+      page: 'crew-supervisor', 
+      loaded: true, 
+      darkMode: false, 
+      stickyMenu: false, 
+      sidebarToggle: false, 
+      scrollTop: false,
+      
+      // Mock data for reworks and fines
+      reworks: [
+        { id: 1, ref: 'Bus #821', type: 'Deep Clean', location: 'Bay 12', reason: 'Trash remaining in rear aisle', amount: 500, fineAccepted: false, retried: false },
+        { id: 2, ref: 'Service Bay 2', type: 'Depot Cleaning', location: 'Maintenance Area', reason: 'Oil spillages not fully absorbed', amount: 165, fineAccepted: false, retried: false }
+      ],
+      
+      // Mock data for cleaning history
+      history: [
+        { ref: 'Bus #402', type: 'Quick Clean', operator: 'Rajesh Kumar', time: '10:15 AM', duration: '8 mins', status: 'Approved', photos: ['https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=600'] },
+        { ref: 'Bus #781', type: 'Overnight Clean', operator: 'Suresh Patil', time: '09:40 AM', duration: '45 mins', status: 'Approved', photos: ['https://images.unsplash.com/photo-1570125909232-eb263c188f7e?w=600'] },
+        { ref: 'Bus #905', type: 'Deep Clean', operator: 'Amit Singh', time: '08:10 AM', duration: '120 mins', status: 'Approved', photos: ['https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=600'] },
+        { ref: 'Washing Pit 1', type: 'Depot Cleaning', operator: 'Vikram Rao', time: '07:30 AM', duration: '60 mins', status: 'Approved', photos: ['https://images.unsplash.com/photo-1570125909232-eb263c188f7e?w=600'] },
+        { ref: 'Bus #301', type: 'Quick Clean', operator: 'Rajesh Kumar', time: '06:45 AM', duration: '10 mins', status: 'Approved', photos: ['https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=600'] }
+      ],
+      
+      searchQuery: '',
+      statusFilter: 'All',
+      
+      activePhoto: null,
+      photoModalOpen: false,
+      
+      acceptFine(item) {
+        item.fineAccepted = true;
+        alert(`Fine for ${item.ref} (INR ${item.amount}) Accepted and processed for deduction.`);
+        // Remove item from reworks if both states resolved, or just flag it
+        setTimeout(() => {
+          this.reworks = this.reworks.filter(r => r.id !== item.id);
+        }, 800);
+      },
+      
+      retryCleaning(item) {
+        item.retried = true;
+        alert(`Rework task assigned for ${item.ref}. Added back to the Cleaning Crew Active Queue.`);
+        // Remove item from reworks queue since it is now sent back to queue
+        setTimeout(() => {
+          this.reworks = this.reworks.filter(r => r.id !== item.id);
+        }, 800);
+      },
+      
+      viewPhotos(photos) {
+        if (photos && photos.length > 0) {
+          this.activePhoto = photos[0];
+          this.photoModalOpen = true;
+        }
+      }
+    }" x-init="
+         darkMode = JSON.parse(localStorage.getItem('darkMode'));
+         $watch('darkMode', value => localStorage.setItem('darkMode', JSON.stringify(value)))"
+  :class="{'dark bg-gray-900': darkMode === true}">
+  <!-- ===== Preloader Start ===== -->
+  <include src="./partials/preloader.html"></include>
+  <!-- ===== Preloader End ===== -->
+
+  <!-- ===== Page Wrapper Start ===== -->
+  <div class="flex h-screen overflow-hidden">
+    <!-- ===== Sidebar Start ===== -->
+    <include src="./partials/sidebar.html"></include>
+    <!-- ===== Sidebar End ===== -->
+
+    <!-- ===== Content Area Start ===== -->
+    <div class="relative flex flex-col flex-1 overflow-x-hidden overflow-y-auto">
+      <!-- Small Device Overlay Start -->
+      <include src="./partials/overlay.html" />
+      <!-- Small Device Overlay End -->
+
+      <!-- ===== Header Start ===== -->
+      <include src="./partials/header.html" />
+      <!-- ===== Header End ===== -->
+
+      <!-- ===== Main Content Start ===== -->
+      <main>
+        <div class="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">
+
+          <!-- Dashboard Header -->
+          <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 class="text-title-md2 font-bold text-gray-800 dark:text-white/90">Crew Supervisor Control Center</h2>
+              <p class="text-base text-gray-500 dark:text-gray-400 mt-1">Manage vendor-side activities, crew performance, reworks, and SLA fines.</p>
+            </div>
+          </div>
+
+          <!-- Stats Grid -->
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-8">
+            <!-- Stat 1 -->
+            <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900 shadow-sm flex flex-col justify-center">
+              <div class="flex items-center gap-4">
+                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-500">
+                  <i class="ph ph-check-square-offset text-2xl"></i>
+                </div>
+                <div>
+                  <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">18 / 24</h4>
+                  <span class="text-sm text-gray-500 dark:text-gray-400">Tasks Completed Today</span>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Stat 2 -->
+            <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900 shadow-sm flex flex-col justify-center">
+              <div class="flex items-center gap-4">
+                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-purple-600 dark:bg-purple-500/10 dark:text-purple-500">
+                  <i class="ph ph-users-three text-2xl"></i>
+                </div>
+                <div>
+                  <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">12 Operators</h4>
+                  <span class="text-sm text-gray-500 dark:text-gray-400">Active On-Duty Crew</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Stat 3 -->
+            <div class="rounded-2xl border border-error-200 bg-error-50/50 p-5 dark:border-error-950 dark:bg-error-500/10 shadow-sm flex flex-col justify-center">
+              <div class="flex items-center gap-4">
+                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-error-100 text-error-600 dark:bg-error-500/20 dark:text-error-500">
+                  <i class="ph ph-warning-circle text-2xl"></i>
+                </div>
+                <div>
+                  <h4 class="text-title-sm font-bold text-error-750 dark:text-error-450" x-text="`${reworks.length} Pending`">2 Pending</h4>
+                  <span class="text-sm text-error-700 dark:text-error-400">Active Rework Tickets</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Stat 4 -->
+            <div class="rounded-2xl border border-warning-200 bg-warning-50 p-5 dark:border-warning-900/50 dark:bg-warning-500/10 shadow-sm flex flex-col justify-center">
+              <div class="flex items-center gap-4">
+                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-warning-100 text-warning-600 dark:bg-warning-500/20 dark:text-warning-500">
+                  <i class="ph ph-currency-inr text-2xl"></i>
+                </div>
+                <div>
+                  <h4 class="text-title-sm font-bold text-warning-800 dark:text-warning-400">INR 665</h4>
+                  <span class="text-sm text-warning-700 dark:text-warning-500">Unresolved Fines</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Rework & Fine Actions Section -->
+          <div class="mb-8">
+            <h3 class="text-title-sm font-bold text-gray-800 dark:text-white/90 mb-4 flex items-center gap-2">
+              <i class="ph ph-clock-counter-clockwise text-xl text-error-500"></i> Active Rejections & Reworks
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <!-- Rework Loop -->
+              <template x-for="item in reworks" :key="item.id">
+                <div class="rounded-2xl border bg-white p-6 shadow-sm dark:bg-gray-900 transition-all duration-300"
+                  :class="item.fineAccepted || item.retried ? 'border-success-500 bg-success-50/20 dark:border-success-700 dark:bg-success-900/10 opacity-70 scale-95' : 'border-error-200 dark:border-error-800'">
+                  
+                  <div class="flex items-start justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                      <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-error-50 text-error-600 dark:bg-error-500/10 dark:text-error-450">
+                        <i class="ph ph-warning-circle text-2xl"></i>
+                      </div>
+                      <div>
+                        <h4 class="text-lg font-bold text-gray-800 dark:text-white" x-text="item.ref"></h4>
+                        <span class="text-xs font-semibold text-gray-500 dark:text-gray-400" x-text="`${item.type} • ${item.location}`"></span>
+                      </div>
+                    </div>
+                    
+                    <span class="rounded-full bg-error-100 text-error-700 dark:bg-error-500/20 dark:text-error-400 px-3 py-1 text-xs font-bold uppercase"
+                      x-text="`INR ${item.amount}`"></span>
+                  </div>
+
+                  <div class="mb-5 rounded-xl bg-gray-50 dark:bg-gray-850 p-4 border border-gray-100 dark:border-gray-800">
+                    <span class="text-xs font-bold text-error-600 dark:text-error-400 block mb-1">Audit Failure Reason:</span>
+                    <p class="text-sm text-gray-700 dark:text-gray-300" x-text="item.reason"></p>
+                  </div>
+
+                  <div class="flex gap-3">
+                    <button @click="acceptFine(item)" :disabled="item.fineAccepted || item.retried"
+                      class="flex-1 rounded-xl border-2 border-error-200 bg-white py-2.5 text-sm font-bold text-error-600 hover:bg-error-50 transition-colors dark:bg-gray-800 dark:border-error-700 dark:hover:bg-gray-750 disabled:opacity-50">
+                      Accept Fine
+                    </button>
+                    <button @click="retryCleaning(item)" :disabled="item.fineAccepted || item.retried"
+                      class="flex-1 rounded-xl bg-brand-500 py-2.5 text-sm font-bold text-white hover:bg-brand-600 transition-colors shadow-sm disabled:opacity-50 flex items-center justify-center gap-2">
+                      <i class="ph ph-paper-plane-tilt"></i> Send to Crew
+                    </button>
+                  </div>
+                </div>
+              </template>
+              
+              <!-- Empty State -->
+              <div x-show="reworks.length === 0" class="col-span-1 md:col-span-2 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50 p-8 text-center">
+                <i class="ph ph-check-circle text-4xl text-success-500 block mb-2"></i>
+                <p class="text-sm font-semibold text-gray-600 dark:text-gray-400">All quality checks cleared! No pending reworks or rejections.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- History Logs Section -->
+          <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 overflow-hidden">
+            <!-- Filter Bar -->
+            <div class="border-b border-gray-200 p-5 dark:border-gray-800 sm:flex sm:items-center sm:justify-between gap-4">
+              <div>
+                <h3 class="text-lg font-bold text-gray-800 dark:text-white/90">Crew Cleaning History</h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Review completed tasks, durations, and reference photos.</p>
+              </div>
+              <div class="flex items-center gap-3 mt-4 sm:mt-0">
+                <div class="relative">
+                  <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                    <i class="ph ph-magnifying-glass text-gray-400"></i>
+                  </div>
+                  <input type="text" x-model="searchQuery" class="block rounded-lg border border-gray-300 bg-gray-50 p-2 pl-9 text-xs text-gray-900 focus:border-brand-500 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white" placeholder="Search ref or operator...">
+                </div>
+                
+                <select x-model="statusFilter" class="block rounded-lg border border-gray-300 bg-gray-50 p-2 text-xs text-gray-900 focus:border-brand-500 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                  <option value="All">All Types</option>
+                  <option value="Quick Clean">Quick Clean</option>
+                  <option value="Deep Clean">Deep Clean</option>
+                  <option value="Overnight Clean">Overnight Clean</option>
+                  <option value="Depot Cleaning">Depot Cleaning</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Table -->
+            <div class="overflow-x-auto">
+              <table class="w-full table-auto text-left">
+                <thead class="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
+                  <tr>
+                    <th class="px-6 py-4 font-bold text-xs uppercase text-gray-500 dark:text-gray-400">Reference ID</th>
+                    <th class="px-6 py-4 font-bold text-xs uppercase text-gray-500 dark:text-gray-400">Cleaning Category</th>
+                    <th class="px-6 py-4 font-bold text-xs uppercase text-gray-500 dark:text-gray-400">Assigned Operator</th>
+                    <th class="px-6 py-4 font-bold text-xs uppercase text-gray-500 dark:text-gray-400">Completed At</th>
+                    <th class="px-6 py-4 font-bold text-xs uppercase text-gray-500 dark:text-gray-400">Duration</th>
+                    <th class="px-6 py-4 font-bold text-xs uppercase text-gray-500 dark:text-gray-400">SLA Status</th>
+                    <th class="px-6 py-4 font-bold text-xs uppercase text-gray-500 dark:text-gray-400 text-right">Proof Photos</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                  <template x-for="log in history.filter(h => (statusFilter === 'All' || h.type === statusFilter) && (searchQuery === '' || h.ref.toLowerCase().includes(searchQuery.toLowerCase()) || h.operator.toLowerCase().includes(searchQuery.toLowerCase())))" :key="log.ref + log.time">
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                      <td class="px-6 py-4 text-sm font-black text-brand-500 dark:text-brand-400" x-text="log.ref"></td>
+                      <td class="px-6 py-4 text-sm text-gray-800 dark:text-gray-300" x-text="log.type"></td>
+                      <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400" x-text="log.operator"></td>
+                      <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400" x-text="log.time"></td>
+                      <td class="px-6 py-4 text-sm text-gray-800 dark:text-white font-medium" x-text="log.duration"></td>
+                      <td class="px-6 py-4 text-sm">
+                        <span class="rounded px-2.5 py-0.5 text-xs font-bold uppercase bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-400 border border-success-200 dark:border-success-500/20" x-text="log.status"></span>
+                      </td>
+                      <td class="px-6 py-4 text-right">
+                        <button @click="viewPhotos(log.photos)" class="text-xs font-bold bg-brand-50 hover:bg-brand-100 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400 dark:hover:bg-brand-500/20 px-3 py-1.5 rounded-lg transition-all inline-flex items-center gap-1">
+                          <i class="ph ph-image text-sm"></i> View Proof
+                        </button>
+                      </td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </main>
+      <!-- ===== Main Content End ===== -->
+    </div>
+    <!-- ===== Content Area End ===== -->
+  </div>
+  <!-- ===== Page Wrapper End ===== -->
+
+  <!-- Photo Proof Modal -->
+  <div x-show="photoModalOpen"
+    class="fixed inset-0 z-[999999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+    style="display: none;">
+    <div @click.outside="photoModalOpen = false"
+      class="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl dark:bg-gray-900 md:p-8">
+      <div class="mb-4 flex items-center justify-between">
+        <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <i class="ph ph-camera text-xl text-brand-500"></i> Consolidated Verification Photo
+        </h3>
+        <button @click="photoModalOpen = false" class="text-gray-400 hover:text-gray-650">
+          <i class="ph ph-x text-2xl"></i>
+        </button>
+      </div>
+      <div class="rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+        <img :src="activePhoto" class="w-full h-auto object-cover max-h-[360px]" alt="Verification Proof">
+      </div>
+      
+      <div class="mt-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-150 dark:border-gray-700">
+        <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
+          <i class="ph ph-shield-check text-success-500 text-lg"></i>
+          Captured matching the <strong>Optimal Ground Angle Reference</strong>. Checked by QA.
+        </p>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>

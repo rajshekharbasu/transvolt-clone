@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport"
+    content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+  <title>Depot Cleaning | TransVolt</title>
+  <!-- Phosphor Icons for large, accessible iconography -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <style>
+    /* Ensure file inputs are fully hidden but functional via labels */
+    input[type="file"] {
+      display: none;
+    }
+  </style>
+</head>
+
+<body x-data="{
+      page: 'depot-cleaning',
+      currentDay: 'Monday',
+      days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+      schedule: {},
+      updateSchedule() {
+        const d = this.currentDay;
+        if (d === 'Sunday') {
+           this.schedule = {
+             'Washing Pits': [{ area: 'Washing Pit 1', task: 'Full Wash & Clean', completed: false }]
+           };
+           return;
+        }
+        
+        this.schedule = {
+          'Washing Pits': [
+            { area: 'Washing Pit 1', task: 'Full Wash & Clean', completed: false }
+          ],
+          'Maintenance Pits': [
+            { area: 'Pit 1', task: (d === 'Monday') ? 'FULL WASH' : 'Broom & Dust', completed: false },
+            { area: 'Pit 2', task: (d === 'Wednesday') ? 'FULL WASH' : 'Broom & Dust', completed: false },
+            { area: 'Pit 3', task: (d === 'Friday') ? 'FULL WASH' : 'Broom & Dust', completed: false }
+          ],
+          'Service Bays': [
+            { area: 'Bay 1', task: (d === 'Monday' || d === 'Saturday') ? 'FULL CLEAN' : 'Dust & Sweep', completed: false },
+            { area: 'Bay 2', task: (d === 'Tuesday') ? 'FULL CLEAN' : 'Dust & Sweep', completed: false },
+            { area: 'Bay 3', task: (d === 'Wednesday') ? 'FULL CLEAN' : 'Dust & Sweep', completed: false },
+            { area: 'Bay 4', task: (d === 'Thursday') ? 'FULL CLEAN' : 'Dust & Sweep', completed: false },
+            { area: 'Bay 5', task: (d === 'Friday') ? 'FULL CLEAN' : 'Dust & Sweep', completed: false }
+          ],
+          'Other Areas': [
+            { area: 'Admin Building', task: 'Daily Clean', completed: false },
+            { area: 'Charging Bays', task: 'Daily Clean', completed: false },
+            { area: 'Washrooms', task: 'Daily Clean', completed: false },
+            { area: 'Depot Premises', task: 'Daily Clean', completed: false }
+          ]
+        };
+      },
+      init() {
+        this.updateSchedule();
+        this.$watch('currentDay', () => {
+           this.updateSchedule();
+        });
+        
+        // Load submissions from localStorage
+        const stored = localStorage.getItem('depot_cleaning_submissions');
+        if (stored) {
+          this.submissions = JSON.parse(stored);
+        } else {
+          // Initialize mock submissions
+          const date1 = new Date(); date1.setDate(date1.getDate() - 1);
+          const date2 = new Date(); date2.setDate(date2.getDate() - 2);
+          const date3 = new Date(); date3.setDate(date3.getDate() - 3);
+          
+          this.submissions = [
+            {
+              id: 'SUB-001',
+              date: date1.toISOString().split('T')[0],
+              day: date1.toLocaleDateString('en-US', { weekday: 'long' }),
+              completedTasks: 12,
+              totalTasks: 13,
+              isIncomplete: true,
+              reasons: ['Shortage of staff'],
+              customProblem: 'Bay 2 mopping was delayed due to missing crew member.',
+              status: 'Approved',
+              rejectionReason: '',
+              submittedAt: '09:30 AM',
+              approvedAt: '11:15 AM',
+              photos: { 'Service Bays': ['https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=300'] }
+            },
+            {
+              id: 'SUB-002',
+              date: date2.toISOString().split('T')[0],
+              day: date2.toLocaleDateString('en-US', { weekday: 'long' }),
+              completedTasks: 13,
+              totalTasks: 13,
+              isIncomplete: false,
+              reasons: [],
+              customProblem: '',
+              status: 'Approved',
+              rejectionReason: '',
+              submittedAt: '10:00 AM',
+              approvedAt: '11:00 AM',
+              photos: {}
+            },
+            {
+              id: 'SUB-003',
+              date: date3.toISOString().split('T')[0],
+              day: date3.toLocaleDateString('en-US', { weekday: 'long' }),
+              completedTasks: 10,
+              totalTasks: 13,
+              isIncomplete: true,
+              reasons: ['Lack of equipment'],
+              customProblem: 'High pressure washer in Pit 1 was out of service.',
+              status: 'Rejected',
+              rejectionReason: 'Please ensure Pit 1 is manually scrubbed and upload photos of clean floor.',
+              submittedAt: '08:45 AM',
+              rejectedAt: '10:15 AM',
+              photos: { 'Washing Pits': ['https://images.unsplash.com/photo-1570125909232-eb263c188f7e?w=300'] }
+            }
+          ];
+          localStorage.setItem('depot_cleaning_submissions', JSON.stringify(this.submissions));
+        }
+      },
+      loaded: true, 
+      darkMode: false, 
+      stickyMenu: false, 
+      sidebarToggle: false, 
+      scrollTop: false,
+      showConfirmModal: false,
+      uploadedPhotos: {},
+      handlePhotoUpload(event, category) {
+        if (!this.uploadedPhotos[category]) {
+          this.uploadedPhotos[category] = [];
+        }
+        const files = event.target.files;
+        for (let i = 0; i < files.length; i++) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            this.uploadedPhotos[category].push(e.target.result);
+            this.uploadedPhotos = { ...this.uploadedPhotos };
+          };
+          reader.readAsDataURL(files[i]);
+        }
+      },
+      activeTab: 'schedule',
+      isIncomplete: false,
+      reasons: [],
+      customProblem: '',
+      submissions: [],
+      editingSubmissionId: null,
+      timeframe: 30,
+      submitReport() {
+        let totalCompleted = 0;
+        let totalTasks = 0;
+        Object.keys(this.schedule).forEach(cat => {
+          this.schedule[cat].forEach(item => {
+            totalTasks++;
+            if (item.completed) totalCompleted++;
+          });
+        });
+
+        if (this.editingSubmissionId) {
+          const subIdx = this.submissions.findIndex(s => s.id === this.editingSubmissionId);
+          if (subIdx !== -1) {
+            this.submissions[subIdx].completedTasks = totalCompleted;
+            this.submissions[subIdx].totalTasks = totalTasks;
+            this.submissions[subIdx].isIncomplete = this.isIncomplete;
+            this.submissions[subIdx].reasons = [...this.reasons];
+            this.submissions[subIdx].customProblem = this.customProblem;
+            this.submissions[subIdx].photos = JSON.parse(JSON.stringify(this.uploadedPhotos));
+            this.submissions[subIdx].status = 'Pending';
+            this.submissions[subIdx].rejectionReason = '';
+            this.submissions[subIdx].submittedAt = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          }
+          this.editingSubmissionId = null;
+          alert('Depot Cleaning Report Updated and Resubmitted!');
+        } else {
+          const newSub = {
+            id: 'SUB-' + Date.now().toString().slice(-4),
+            date: new Date().toISOString().split('T')[0],
+            day: this.currentDay,
+            completedTasks: totalCompleted,
+            totalTasks: totalTasks,
+            isIncomplete: this.isIncomplete,
+            reasons: [...this.reasons],
+            customProblem: this.customProblem,
+            status: 'Pending',
+            rejectionReason: '',
+            submittedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            photos: JSON.parse(JSON.stringify(this.uploadedPhotos))
+          };
+          this.submissions.unshift(newSub);
+          alert('Depot Cleaning Report Submitted for Approval!');
+        }
+        
+        localStorage.setItem('depot_cleaning_submissions', JSON.stringify(this.submissions));
+        
+        this.isIncomplete = false;
+        this.reasons = [];
+        this.customProblem = '';
+        this.uploadedPhotos = {};
+        this.updateSchedule();
+        this.showConfirmModal = false;
+      },
+      editSubmission(sub) {
+        if (sub.status !== 'Pending' && sub.status !== 'Rejected') {
+          alert('Only Pending or Rejected reports can be edited!');
+          return;
+        }
+        this.editingSubmissionId = sub.id;
+        this.currentDay = sub.day;
+        this.isIncomplete = sub.isIncomplete;
+        this.reasons = [...sub.reasons];
+        this.customProblem = sub.customProblem;
+        this.uploadedPhotos = JSON.parse(JSON.stringify(sub.photos || {}));
+        this.updateSchedule();
+        this.activeTab = 'schedule';
+      }
+    }" x-init="
+         init();
+         darkMode = JSON.parse(localStorage.getItem('darkMode')) || false;
+         $watch('darkMode', value => localStorage.setItem('darkMode', JSON.stringify(value)))"
+  :class="{'dark bg-gray-900': darkMode === true}">
+  <!-- ===== Preloader Start ===== -->
+  <include src="./partials/preloader.html"></include>
+  <!-- ===== Preloader End ===== -->
+
+  <!-- ===== Page Wrapper Start ===== -->
+  <div class="flex h-screen overflow-hidden">
+    <!-- ===== Sidebar Start ===== -->
+    <include src="./partials/sidebar.html"></include>
+    <!-- ===== Sidebar End ===== -->
+
+    <!-- ===== Content Area Start ===== -->
+    <div class="relative flex flex-col flex-1 overflow-x-hidden overflow-y-auto">
+      <!-- Small Device Overlay Start -->
+      <include src="./partials/overlay.html" />
+      <!-- Small Device Overlay End -->
+
+      <!-- ===== Header Start ===== -->
+      <include src="./partials/header.html" />
+      <!-- ===== Header End ===== -->
+
+      <!-- ===== Main Content Start ===== -->
+      
+      
+      
+      <main>
+        <div class="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">
+          
+          <!-- Tabs Navigation -->
+          <div class="mb-6 border-b border-gray-200 dark:border-gray-700">
+            <nav class="-mb-px flex gap-6" aria-label="Tabs">
+              <button @click="activeTab = 'schedule'"
+                class="inline-flex shrink-0 items-center gap-2 border-b-2 px-1 pb-4 text-sm font-medium transition-colors"
+                :class="activeTab === 'schedule' ? 'border-brand-500 text-brand-600 dark:text-brand-500' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'">
+                <i class="ph ph-list-checks text-lg"></i> Schedule Checklist
+              </button>
+              <button @click="activeTab = 'submissions'"
+                class="inline-flex shrink-0 items-center gap-2 border-b-2 px-1 pb-4 text-sm font-medium transition-colors"
+                :class="activeTab === 'submissions' ? 'border-brand-500 text-brand-600 dark:text-brand-500' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'">
+                <i class="ph ph-history text-lg"></i> Submissions History
+              </button>
+            </nav>
+          </div>
+
+          <!-- Schedule Tab -->
+          <div x-show="activeTab === 'schedule'">
+            <div
+              class="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-200 dark:border-gray-800 dark:bg-gray-900 shadow-sm">
+              <div>
+                <h2 class="text-title-md2 font-bold text-gray-800 dark:text-white/90">Depot Cleaning Schedule</h2>
+                <p class="text-base text-gray-500 dark:text-gray-400 mt-1">Review and manage the segregated daily tasks for all premises.</p>
+              </div>
+
+              <div class="flex items-center gap-4 relative z-20">
+                <div
+                  class="relative bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl shadow-sm w-48 hover:border-brand-500 transition-colors">
+                  <select x-model="currentDay"
+                    class="w-full bg-transparent py-3 pl-5 pr-12 outline-none appearance-none font-bold text-brand-600 dark:text-brand-400 cursor-pointer text-lg">
+                    <template x-for="day in days" :key="day">
+                      <option :value="day" x-text="day"></option>
+                    </template>
+                  </select>
+                  <span class="absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none text-brand-500">
+                    <i class="ph ph-calendar-blank text-xl"></i>
+                  </span>
+                </div>
+                <div
+                  class="relative bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl shadow-sm hover:border-brand-500 transition-colors">
+                  <input type="date"
+                    class="w-full bg-transparent py-3 px-5 outline-none font-bold text-gray-700 dark:text-gray-300 cursor-pointer" />
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <template x-for="(items, category) in schedule" :key="category">
+                <div
+                  class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900 flex flex-col"
+                  x-show="items && items.length > 0">
+
+                  <h3 class="text-xl font-bold text-gray-800 dark:text-white/90 mb-5 flex items-center gap-3">
+                    <div
+                      class="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800 text-xl font-bold">
+                      <i class="ph" :class="
+                        category.includes('Washing') ? 'ph-drop text-blue-500' : 
+                        category.includes('Maintenance') ? 'ph-wrench text-orange-500' : 
+                        category.includes('Service') ? 'ph-garage text-brand-500' : 
+                        'ph-buildings text-purple-500'
+                      "></i>
+                    </div>
+                    <span x-text="category"></span>
+                    <span
+                      class="ml-auto bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-sm py-1 px-3 rounded-full font-semibold">
+                      <span x-text="items.filter(i => i.completed).length"></span> / <span x-text="items.length"></span>
+                    </span>
+                  </h3>
+
+                  <div class="space-y-3 flex-1">
+                    <template x-for="(item, index) in items" :key="index">
+                      <div @click="item.completed = !item.completed"
+                        class="cursor-pointer rounded-xl border p-4 transition-all flex items-center justify-between gap-4 group"
+                        :class="item.completed ? 'bg-success-50 dark:bg-success-500/10 border-success-200 dark:border-success-500/30' : 'bg-gray-50 border-gray-100 hover:border-brand-300 hover:shadow-sm dark:bg-gray-800/50 dark:border-gray-700/50 dark:hover:border-brand-500/50'">
+                        <div>
+                          <h4 class="font-bold text-md transition-colors"
+                            :class="item.completed ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-800 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400'"
+                            x-text="item.area"></h4>
+                          <p class="text-sm font-semibold mt-1"
+                            :class="item.completed ? 'text-gray-400 dark:text-gray-500 line-through' : (item.task.includes('FULL') ? 'text-brand-500' : 'text-gray-500 dark:text-gray-400')"
+                            x-text="item.task"></p>
+                        </div>
+                        <div
+                          class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors"
+                          :class="item.completed ? 'border-success-500 bg-success-500 text-white shadow-sm' : 'border-gray-300 dark:border-gray-600 text-transparent group-hover:border-brand-400'">
+                          <i class="ph ph-check font-bold text-sm" x-show="item.completed"></i>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+
+                  <div class="mt-5 pt-5 border-t border-gray-100 dark:border-gray-800">
+                    <!-- Uploaded Photos List -->
+                    <div x-show="uploadedPhotos[category] && uploadedPhotos[category].length > 0"
+                      class="flex flex-wrap gap-2 mb-4">
+                      <template x-for="(photo, pIdx) in (uploadedPhotos[category] || [])" :key="pIdx">
+                        <div
+                          class="relative h-16 w-16 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
+                          <img :src="photo" class="h-full w-full object-cover" />
+                          <button
+                            @click.stop="uploadedPhotos[category].splice(pIdx, 1); uploadedPhotos = { ...uploadedPhotos }"
+                            class="absolute top-1 right-1 bg-black/60 hover:bg-black/80 text-white rounded-full p-1 transition-colors leading-none flex items-center justify-center">
+                            <i class="ph ph-x text-[10px]"></i>
+                          </button>
+                        </div>
+                      </template>
+                    </div>
+
+                    <!-- Add Photos Button -->
+                    <label
+                      class="cursor-pointer inline-flex items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 hover:border-brand-500 hover:text-brand-500 dark:hover:border-brand-500 dark:hover:text-brand-400 bg-gray-50/50 hover:bg-brand-50/10 dark:bg-gray-800/10 py-3 px-4 w-full transition-all text-sm font-bold text-gray-600 dark:text-gray-400">
+                      <i class="ph ph-camera text-lg"></i>
+                      <span>Add Photos</span>
+                      <input type="file" accept="image/*" multiple @change="handlePhotoUpload($event, category)"
+                        class="hidden" />
+                    </label>
+                  </div>
+
+                </div>
+              </template>
+            </div>
+
+            <!-- Incomplete Cleaning Section -->
+            <div class="mt-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="text-lg font-bold text-gray-800 dark:text-white/90">Report Incomplete Cleaning</h3>
+                  <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Check this if any scheduled area could not be cleaned completely.</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" x-model="isIncomplete" class="sr-only peer">
+                  <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-error-500"></div>
+                </label>
+              </div>
+
+              <!-- Options & Custom Text Input -->
+              <div x-show="isIncomplete" x-transition class="mt-6 pt-6 border-t border-gray-100 dark:border-gray-800 space-y-4" style="display: none;">
+                <span class="text-sm font-bold text-gray-700 dark:text-gray-300 block">Select Reasons for Incomplete Cleaning:</span>
+                <div class="flex flex-wrap gap-3">
+                  <label class="cursor-pointer flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium transition-all"
+                    :class="reasons.includes('Lack of equipment') ? 'bg-error-50 dark:bg-error-500/10 border-error-500 text-error-700 dark:text-error-400' : 'bg-gray-50 dark:bg-gray-800 border-gray-200 text-gray-700 dark:text-gray-300'">
+                    <input type="checkbox" value="Lack of equipment" x-model="reasons" class="sr-only">
+                    <i class="ph ph-wrench text-md"></i>
+                    Lack of Equipment
+                  </label>
+                  <label class="cursor-pointer flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium transition-all"
+                    :class="reasons.includes('Shortage of staff') ? 'bg-error-50 dark:bg-error-500/10 border-error-500 text-error-700 dark:text-error-400' : 'bg-gray-50 dark:bg-gray-800 border-gray-200 text-gray-700 dark:text-gray-300'">
+                    <input type="checkbox" value="Shortage of staff" x-model="reasons" class="sr-only">
+                    <i class="ph ph-users text-md"></i>
+                    Shortage of Staff
+                  </label>
+                  <label class="cursor-pointer flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium transition-all"
+                    :class="reasons.includes('Water supply issue') ? 'bg-error-50 dark:bg-error-500/10 border-error-500 text-error-700 dark:text-error-400' : 'bg-gray-50 dark:bg-gray-800 border-gray-200 text-gray-700 dark:text-gray-300'">
+                    <input type="checkbox" value="Water supply issue" x-model="reasons" class="sr-only">
+                    <i class="ph ph-drop text-md"></i>
+                    Water Supply Issue
+                  </label>
+                  <label class="cursor-pointer flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium transition-all"
+                    :class="reasons.includes('Power outage') ? 'bg-error-50 dark:bg-error-500/10 border-error-500 text-error-700 dark:text-error-400' : 'bg-gray-50 dark:bg-gray-800 border-gray-200 text-gray-700 dark:text-gray-300'">
+                    <input type="checkbox" value="Power outage" x-model="reasons" class="sr-only">
+                    <i class="ph ph-lightning text-md"></i>
+                    Power Outage
+                  </label>
+                </div>
+
+                <div class="mt-4">
+                  <label class="text-sm font-bold text-gray-700 dark:text-gray-300 block mb-2">Other Custom Problems:</label>
+                  <textarea x-model="customProblem" rows="3" placeholder="Describe any custom problems or issues encountered..." class="w-full rounded-xl border border-gray-200 bg-gray-50/50 p-4 text-sm outline-none focus:border-brand-500 dark:border-gray-800 dark:bg-gray-850 dark:focus:border-brand-500 dark:text-white transition-colors"></textarea>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-8">
+              <button @click="showConfirmModal = true"
+                class="w-full rounded-2xl py-4 font-bold text-white text-lg transition-all bg-brand-500 hover:bg-brand-600 shadow-lg hover:shadow-brand-500/25 active:scale-[0.99]"
+                x-text="editingSubmissionId ? 'Confirm Updates & Submit' : 'Submit'">
+                Submit
+              </button>
+            </div>
+          </div>
+
+          <!-- Submissions Tab -->
+          <div x-show="activeTab === 'submissions'" style="display: none;" class="space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4 bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm">
+              <div>
+                <h3 class="text-xl font-bold text-gray-800 dark:text-white/90">Past Submissions</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Review status and edit pending or rejected reports.</p>
+              </div>
+              <div class="flex items-center gap-3 flex-wrap">
+                <span class="text-sm font-bold text-gray-500">TIMEFRAME:</span>
+                <button @click="timeframe = 7" :class="timeframe === 7 ? 'bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400 border border-brand-200 dark:border-gray-800' : 'bg-white text-gray-600 dark:bg-gray-800 border border-gray-200 dark:border-gray-700'" class="px-3 py-1.5 text-xs font-bold rounded-lg transition-colors">7 Days</button>
+                <button @click="timeframe = 30" :class="timeframe === 30 ? 'bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400 border border-brand-200 dark:border-gray-800' : 'bg-white text-gray-600 dark:bg-gray-800 border border-gray-200 dark:border-gray-700'" class="px-3 py-1.5 text-xs font-bold rounded-lg transition-colors">30 Days</button>
+              </div>
+            </div>
+
+            <!-- List of Submissions -->
+            <div class="grid grid-cols-1 gap-6">
+              <template x-for="sub in submissions.filter(s => {
+                const diffDays = Math.ceil(Math.abs(new Date() - new Date(s.date)) / (1000 * 60 * 60 * 24));
+                return diffDays <= timeframe;
+              })" :key="sub.id">
+                <div class="rounded-2xl border p-6 bg-white dark:bg-gray-900 shadow-sm flex flex-col md:flex-row md:items-start justify-between gap-6"
+                  :class="sub.status === 'Approved' ? 'border-success-200 dark:border-success-500/20' : sub.status === 'Rejected' ? 'border-error-200 dark:border-error-500/20' : 'border-warning-200 dark:border-warning-500/20'">
+                  <div class="space-y-4 flex-1">
+                    <div class="flex items-center gap-3">
+                      <h4 class="text-lg font-bold text-gray-900 dark:text-white" x-text="sub.day + ', ' + sub.date"></h4>
+                      <span class="rounded px-2.5 py-0.5 text-xs font-bold uppercase"
+                        :class="sub.status === 'Approved' ? 'bg-success-100 text-success-800 dark:bg-success-500/20 dark:text-success-400' : sub.status === 'Rejected' ? 'bg-error-100 text-error-800 dark:bg-error-500/20 dark:text-error-400' : 'bg-warning-100 text-warning-800 dark:bg-warning-500/20 dark:text-warning-400'"
+                        x-text="sub.status"></span>
+                    </div>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                      <div>
+                        <span class="block text-[10px] uppercase text-gray-400 font-bold mb-1">Tasks Done</span>
+                        <span class="text-sm font-bold text-gray-800 dark:text-white" x-text="sub.completedTasks + '/' + sub.totalTasks"></span>
+                      </div>
+                      <div>
+                        <span class="block text-[10px] uppercase text-gray-400 font-bold mb-1">Submitted At</span>
+                        <span class="text-sm font-bold text-gray-800 dark:text-white" x-text="sub.submittedAt"></span>
+                      </div>
+                      <div>
+                        <span class="block text-[10px] uppercase text-gray-400 font-bold mb-1">Incomplete Cleaning</span>
+                        <span class="text-sm font-bold" :class="sub.isIncomplete ? 'text-error-600 dark:text-error-400' : 'text-success-600 dark:text-success-400'" x-text="sub.isIncomplete ? 'Yes' : 'No'"></span>
+                      </div>
+                      <div x-show="sub.approvedAt || sub.rejectedAt">
+                        <span class="block text-[10px] uppercase text-gray-400 font-bold mb-1" x-text="sub.status === 'Approved' ? 'Approved At' : 'Rejected At'"></span>
+                        <span class="text-sm font-bold text-gray-800 dark:text-white" x-text="sub.approvedAt || sub.rejectedAt"></span>
+                      </div>
+                    </div>
+
+                    <!-- Reasons & Custom Problems -->
+                    <div x-show="sub.isIncomplete" class="rounded-xl bg-error-50/50 dark:bg-error-500/5 p-4 border border-error-100 dark:border-error-500/10">
+                      <span class="text-xs font-bold text-error-700 dark:text-error-400 block mb-1">INCOMPLETE DETAILS</span>
+                      <p class="text-xs font-medium text-error-800 dark:text-error-300">
+                        <strong>Reasons:</strong> <span x-text="sub.reasons.join(', ') || 'None'"></span>
+                      </p>
+                      <p x-show="sub.customProblem" class="text-xs font-medium text-error-800 dark:text-error-300 mt-1">
+                        <strong>Notes:</strong> <span x-text="sub.customProblem"></span>
+                      </p>
+                    </div>
+
+                    <!-- Rejection Reason -->
+                    <div x-show="sub.status === 'Rejected' && sub.rejectionReason" class="rounded-xl bg-error-100/50 dark:bg-error-500/10 p-4 border border-error-200 dark:border-error-500/20">
+                      <span class="text-xs font-bold text-error-800 dark:text-error-400 block mb-1">REJECTION COMMENTS (FLEET MANAGER)</span>
+                      <p class="text-xs font-medium text-error-950 dark:text-error-300" x-text="sub.rejectionReason"></p>
+                    </div>
+                  </div>
+
+                  <!-- Action Buttons -->
+                  <div class="flex items-center gap-3">
+                    <button @click="editSubmission(sub)" x-show="sub.status === 'Pending' || sub.status === 'Rejected'"
+                      class="px-4 py-2 text-sm font-bold bg-brand-50 hover:bg-brand-100 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400 dark:hover:bg-brand-500/20 rounded-xl transition-all flex items-center gap-1.5">
+                      <i class="ph ph-note-pencil text-md"></i> Edit Report
+                    </button>
+                    <span x-show="sub.status === 'Approved'" class="text-xs font-bold text-success-600 dark:text-success-400 flex items-center gap-1">
+                      <i class="ph ph-lock text-md"></i> Approved & Locked
+                    </span>
+                  </div>
+                </div>
+              </template>
+              
+              <!-- Empty State -->
+              <div x-show="submissions.filter(s => {
+                const diffDays = Math.ceil(Math.abs(new Date() - new Date(s.date)) / (1000 * 60 * 60 * 24));
+                return diffDays <= timeframe;
+              }).length === 0" class="rounded-2xl border border-gray-200 bg-white p-12 text-center dark:border-gray-800 dark:bg-gray-900">
+                <i class="ph ph-folder-open text-4xl text-gray-300 dark:text-gray-700 block mb-2"></i>
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">No submissions found in the selected timeframe.</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </main>
+
+
+
+      <!-- ===== Main Content End ===== -->
+    </div>
+    <!-- ===== Content Area End ===== -->
+
+    <!-- Confirmation Modal -->
+    <div x-show="showConfirmModal" class="fixed inset-0 z-[999999] flex items-center justify-center bg-black/50 backdrop-blur-sm" style="display: none;">
+      <div @click.outside="showConfirmModal = false" class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-800 border border-gray-200 dark:border-gray-700 m-4">
+        <div class="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-warning-100 dark:bg-warning-500/20 text-warning-600 dark:text-warning-500 mx-auto">
+          <i class="ph ph-warning-circle text-3xl"></i>
+        </div>
+        <h3 class="text-xl font-bold text-gray-800 dark:text-white text-center mb-2" x-text="editingSubmissionId ? 'Submit Updates?' : 'Submit Daily Report?'">Submit Daily Report?</h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400 text-center mb-6">Are you sure you want to submit today's cleaning report? This action cannot be undone.</p>
+        <div class="flex gap-4">
+          <button @click="showConfirmModal = false" class="flex-1 rounded-xl bg-gray-100 py-3 font-bold text-gray-700 transition hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">Cancel</button>
+          <button @click="submitReport()" class="flex-1 rounded-xl bg-brand-500 py-3 font-bold text-white transition hover:bg-brand-600 shadow-sm">Confirm</button>
+        </div>
+      </div>
+    </div>
+    <!-- ===== Content Area End ===== -->
+  </div>
+  <!-- ===== Page Wrapper End ===== -->
+  <svg style="visibility: hidden; position: absolute;" width="0" height="0" xmlns="http://www.w3.org/2000/svg" version="1.1">
+    <defs>
+      <filter id="goo" x="-50%" y="-50%" width="200%" height="300%">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
+        <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 19 -9" result="goo" />
+        <feComposite in="SourceGraphic" in2="goo" operator="atop"/>
+      </filter>
+    </defs>
+  </svg>
+</body>
+</html>

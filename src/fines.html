@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport"
+    content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+  <title>SLA Fines & Penalties | TransVolt</title>
+  <!-- Phosphor Icons for large, accessible iconography -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <style>
+    /* Ensure file inputs are fully hidden but functional via labels */
+    input[type="file"] {
+      display: none;
+    }
+  </style>
+</head>
+
+<body x-data="{ 
+      page: 'fines', 
+      loaded: true, 
+      darkMode: false, 
+      stickyMenu: false, 
+      sidebarToggle: false, 
+      scrollTop: false,
+      finesData: [
+        { id: 'F-101', date: '2026-05-25', ref: 'Bus #402', violation: 'Quick Transit Cleaning – Missed Deadline', type: 'Delay', reason: 'Staff Shortage', amount: 'INR 165', status: 'Pending' },
+        { id: 'F-102', date: '2026-05-24', ref: 'Bus #781', violation: 'Overnight Cleaning – Missed Deadline', type: 'Delay', reason: 'Delay in Bus Arrival', amount: 'INR 500', status: 'Paid' },
+        { id: 'F-103', date: '2026-05-23', ref: 'Depot Maint. Pit 1', violation: 'Cleaning Standard Non-Compliance', type: 'Quality', reason: 'Equipment Failure', amount: 'INR 500', status: 'Pending' },
+        { id: 'F-104', date: '2026-05-22', ref: 'Bus #112', violation: 'Passenger Cleaning Complaint', type: 'Quality', reason: 'Unsatisfactory Workmanship', amount: 'INR 165', status: 'Pending' },
+        { id: 'F-105', date: '2026-05-21', ref: 'Service Bay 2', violation: 'Unsatisfactory Cleaning Quality', type: 'Quality', reason: 'Equipment Failure', amount: 'INR 165', status: 'Paid' },
+        { id: 'F-106', date: '2026-05-20', ref: 'Washing Pit', violation: 'Missed Cleaning SCHEDULE', type: 'Missed Schedule', reason: 'Staff Shortage', amount: 'INR 500', status: 'Paid' }
+      ],
+      fineModalOpen: false,
+      detailsModalOpen: false,
+      activeFine: null,
+      newFine: { ref: '', violation: 'Missed Deadline', type: 'Delay', reason: 'Staff Shortage', amount: '' },
+      viewFine(id) {
+        this.activeFine = this.finesData.find(f => f.id === id);
+        this.detailsModalOpen = true;
+      },
+      payFine(id) {
+        const fine = this.finesData.find(f => f.id === id);
+        if (fine) fine.status = 'Paid';
+        if (this.activeFine && this.activeFine.id === id) this.activeFine.status = 'Paid';
+      },
+      appealFine(id) {
+        const fine = this.finesData.find(f => f.id === id);
+        if (fine) fine.status = 'Appealed';
+        if (this.activeFine && this.activeFine.id === id) this.activeFine.status = 'Appealed';
+      },
+      transferFine(id) {
+        const fine = this.finesData.find(f => f.id === id);
+        if (fine) fine.status = 'Transferred';
+        if (this.activeFine && this.activeFine.id === id) this.activeFine.status = 'Transferred';
+        alert(`Fine ${id} has been transferred to Vendor successfully.`);
+      },
+      addFine() {
+        if (!this.newFine.ref || !this.newFine.amount) return;
+        const newId = 'F-' + (100 + this.finesData.length + 1);
+        const date = new Date().toISOString().split('T')[0];
+        this.finesData.unshift({
+          id: newId,
+          date: date,
+          ref: this.newFine.ref,
+          violation: this.newFine.violation,
+          type: this.newFine.type,
+          reason: this.newFine.reason,
+          amount: 'INR ' + this.newFine.amount,
+          status: 'Pending'
+        });
+        this.newFine = { ref: '', violation: 'Missed Deadline', type: 'Delay', reason: 'Staff Shortage', amount: '' };
+        this.fineModalOpen = false;
+      },
+      get totalFinesAmount() {
+        return this.finesData.reduce((acc, curr) => acc + parseInt(curr.amount.replace('INR ', '') || 0), 0).toLocaleString();
+      },
+      get pendingFinesAmount() {
+        return this.finesData.filter(f => f.status === 'Pending').reduce((acc, curr) => acc + parseInt(curr.amount.replace('INR ', '') || 0), 0).toLocaleString();
+      },
+      get totalIncidents() {
+        return this.finesData.length;
+      }
+    }" x-init="
+         darkMode = JSON.parse(localStorage.getItem('darkMode'));
+         $watch('darkMode', value => localStorage.setItem('darkMode', JSON.stringify(value)))"
+  :class="{'dark bg-gray-900': darkMode === true}">
+  <!-- ===== Preloader Start ===== -->
+  <include src="./partials/preloader.html"></include>
+  <!-- ===== Preloader End ===== -->
+
+  <!-- ===== Page Wrapper Start ===== -->
+  <div class="flex h-screen overflow-hidden">
+    <!-- ===== Sidebar Start ===== -->
+    <include src="./partials/sidebar.html"></include>
+    <!-- ===== Sidebar End ===== -->
+
+    <!-- ===== Content Area Start ===== -->
+    <div class="relative flex flex-col flex-1 overflow-x-hidden overflow-y-auto">
+      <!-- Small Device Overlay Start -->
+      <include src="./partials/overlay.html" />
+      <!-- Small Device Overlay End -->
+
+      <!-- ===== Header Start ===== -->
+      <include src="./partials/header.html" />
+      <!-- ===== Header End ===== -->
+
+      <!-- ===== Main Content Start ===== -->
+      
+      <main>
+        <div class="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">
+          <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 class="text-title-md2 font-bold text-gray-800 dark:text-white/90">SLA Fines & Penalties</h2>
+              <p class="text-base text-gray-500 dark:text-gray-400 mt-1">Track penalties for missed cleaning procedures or delayed turnaround times.</p>
+            </div>
+            <div class="flex gap-3">
+              <button class="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">
+                <i class="ph ph-download-simple"></i> Export CSV
+              </button>
+              <button @click="fineModalOpen = true" class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-600 transition-colors">
+                <i class="ph ph-plus"></i> Log Manual Fine
+              </button>
+            </div>
+          </div>
+
+          <!-- Top Stats -->
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-8">
+            <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900 shadow-sm flex flex-col justify-center">
+              <div class="flex items-center gap-4">
+                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-error-50 text-error-600 dark:bg-error-500/10 dark:text-error-500">
+                  <i class="ph ph-currency-inr text-2xl"></i>
+                </div>
+                <div>
+                  <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90" x-text="`INR ${totalFinesAmount}`">INR 12,450</h4>
+                  <span class="text-sm text-gray-500 dark:text-gray-400">Total Fines (YTD)</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="rounded-2xl border border-warning-200 bg-warning-50 p-5 dark:border-warning-900/50 dark:bg-warning-500/10 shadow-sm flex flex-col justify-center">
+              <div class="flex items-center gap-4">
+                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-warning-100 text-warning-600 dark:bg-warning-500/20 dark:text-warning-500">
+                  <i class="ph ph-warning-circle text-2xl"></i>
+                </div>
+                <div>
+                  <h4 class="text-title-sm font-bold text-warning-800 dark:text-warning-400" x-text="`INR ${pendingFinesAmount}`">INR 3,200</h4>
+                  <span class="text-sm text-warning-700 dark:text-warning-500">Pending Payment</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900 shadow-sm flex flex-col justify-center">
+              <div class="flex items-center gap-4">
+                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                  <i class="ph ph-trend-up text-2xl"></i>
+                </div>
+                <div>
+                  <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">Missed Deadline</h4>
+                  <span class="text-sm text-gray-500 dark:text-gray-400">Top Violation Type</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900 shadow-sm flex flex-col justify-center">
+              <div class="flex items-center gap-4">
+                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-500">
+                  <i class="ph ph-ticket text-2xl"></i>
+                </div>
+                <div>
+                  <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90" x-text="totalIncidents">24</h4>
+                  <span class="text-sm text-gray-500 dark:text-gray-400">Total Incidents</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 overflow-hidden" x-data="{ search: '', filterStatus: 'All', filterType: 'All', filterReason: 'All' }" x-init="
+            const params = new URLSearchParams(window.location.search);
+            if (params.has('type')) filterType = params.get('type');
+            if (params.has('reason')) filterReason = params.get('reason');
+            if (params.has('search')) search = params.get('search');
+          ">
+            <!-- Table Header / Filters -->
+            <div class="border-b border-gray-200 p-4 dark:border-gray-800 sm:flex sm:items-center sm:justify-between">
+              <div class="relative mb-4 sm:mb-0 sm:w-64">
+                <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                  <i class="ph ph-magnifying-glass text-gray-400"></i>
+                </div>
+                <input type="text" x-model="search" class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 pl-10 text-sm text-gray-900 focus:border-brand-500 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400" placeholder="Search fines or refs...">
+              </div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <select x-model="filterStatus" class="block rounded-lg border border-gray-300 bg-gray-50 p-2 text-sm text-gray-900 focus:border-brand-500 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white min-w-32">
+                  <option value="All">All Statuses</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Paid">Paid</option>
+                  <option value="Appealed">Appealed</option>
+                  <option value="Transferred">Transferred</option>
+                </select>
+                <select x-model="filterType" class="block rounded-lg border border-gray-300 bg-gray-50 p-2 text-sm text-gray-900 focus:border-brand-500 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white min-w-32">
+                  <option value="All">All Types</option>
+                  <option value="Delay">Delay</option>
+                  <option value="Quality">Quality</option>
+                  <option value="Missed Schedule">Missed Schedule</option>
+                </select>
+                <select x-model="filterReason" class="block rounded-lg border border-gray-300 bg-gray-50 p-2 text-sm text-gray-900 focus:border-brand-500 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white min-w-32">
+                  <option value="All">All Failure Reasons</option>
+                  <option value="Staff Shortage">Staff Shortage</option>
+                  <option value="Equipment Failure">Equipment Failure</option>
+                  <option value="Delay in Bus Arrival">Delay in Bus Arrival</option>
+                  <option value="Unsatisfactory Workmanship">Unsatisfactory Workmanship</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Table -->
+            <div class="overflow-x-auto">
+              <table class="w-full table-auto text-left">
+                <thead class="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
+                  <tr>
+                    <th class="px-6 py-4 font-bold text-gray-800 dark:text-white/90">Fine ID</th>
+                    <th class="px-6 py-4 font-bold text-gray-800 dark:text-white/90">Date</th>
+                    <th class="px-6 py-4 font-bold text-gray-800 dark:text-white/90">Reference</th>
+                    <th class="px-6 py-4 font-bold text-gray-800 dark:text-white/90">Violation & Type</th>
+                    <th class="px-6 py-4 font-bold text-gray-800 dark:text-white/90">Failure Reason</th>
+                    <th class="px-6 py-4 font-bold text-gray-800 dark:text-white/90">Amount</th>
+                    <th class="px-6 py-4 font-bold text-gray-800 dark:text-white/90">Status</th>
+                    <th class="px-6 py-4 font-bold text-right text-gray-800 dark:text-white/90">Actions</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                  <template x-for="fine in finesData.filter(f => (filterStatus === 'All' || f.status === filterStatus) && (filterType === 'All' || f.type === filterType) && (filterReason === 'All' || f.reason === filterReason) && (search === '' || f.id.toLowerCase().includes(search.toLowerCase()) || f.ref.toLowerCase().includes(search.toLowerCase()) || f.violation.toLowerCase().includes(search.toLowerCase())))" :key="fine.id">
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                      <td class="px-6 py-4 text-sm font-black text-gray-900 dark:text-white" x-text="fine.id"></td>
+                      <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400" x-text="fine.date"></td>
+                      <td class="px-6 py-4 text-sm font-bold text-brand-500" x-text="fine.ref"></td>
+                      <td class="px-6 py-4">
+                        <div class="text-sm font-medium text-gray-800 dark:text-gray-300" x-text="fine.violation"></div>
+                        <span class="inline-flex items-center rounded-md bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 text-xs font-semibold text-blue-700 dark:text-blue-400 ring-1 ring-inset ring-blue-700/10 dark:ring-blue-400/20 mt-1" x-text="fine.type"></span>
+                      </td>
+                      <td class="px-6 py-4">
+                        <span class="inline-flex items-center rounded-md bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:text-amber-400 ring-1 ring-inset ring-amber-600/10 dark:ring-amber-400/20" x-text="fine.reason"></span>
+                      </td>
+                      <td class="px-6 py-4 text-sm font-bold text-error-600 dark:text-error-500" x-text="fine.amount"></td>
+                      <td class="px-6 py-4">
+                        <span class="rounded px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider border"
+                              :class="{
+                                'bg-success-50 text-success-700 border-success-200 dark:bg-success-500/10 dark:text-success-400 dark:border-success-500/20': fine.status === 'Paid',
+                                'bg-warning-50 text-warning-700 border-warning-200 dark:bg-warning-500/10 dark:text-warning-400 dark:border-warning-500/20': fine.status === 'Pending',
+                                'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-500/20': fine.status === 'Appealed',
+                                'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20': fine.status === 'Transferred'
+                              }"
+                              x-text="fine.status"></span>
+                      </td>
+                      <td class="px-6 py-4 text-right">
+                        <div class="flex items-center justify-end gap-2">
+                          <button @click="payFine(fine.id)" x-show="fine.status === 'Pending'" class="text-sm font-bold text-success-600 hover:text-success-700 dark:text-success-500 dark:hover:text-success-400 transition-colors" title="Pay Fine">
+                            <i class="ph ph-check-circle text-lg"></i>
+                          </button>
+                          <button @click="appealFine(fine.id)" x-show="fine.status === 'Pending'" class="text-sm font-medium text-warning-600 hover:text-warning-700 dark:text-warning-500 dark:hover:text-warning-400 transition-colors ml-2" title="Appeal">
+                            <i class="ph ph-flag text-lg"></i>
+                          </button>
+                          <button @click="viewFine(fine.id)" class="text-sm font-bold text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 transition-colors ml-2">View Details</button>
+                        </div>
+                      </td>
+                    </tr>
+                  </template>
+                  
+                  <!-- Empty State -->
+                  <tr x-show="finesData.filter(f => (filterStatus === 'All' || f.status === filterStatus) && (filterType === 'All' || f.type === filterType) && (filterReason === 'All' || f.reason === filterReason) && (search === '' || f.id.toLowerCase().includes(search.toLowerCase()) || f.ref.toLowerCase().includes(search.toLowerCase()) || f.violation.toLowerCase().includes(search.toLowerCase()))).length === 0" style="display: none;">
+                    <td colspan="8" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                      <div class="flex flex-col items-center justify-center gap-2">
+                        <i class="ph ph-receipt text-4xl text-gray-300 dark:text-gray-600"></i>
+                        <p class="text-sm font-medium">No fines found matching your filters.</p>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            
+            <!-- Pagination (Mock) -->
+            <div class="flex items-center justify-between border-t border-gray-200 p-4 dark:border-gray-800">
+              <span class="text-sm text-gray-500 dark:text-gray-400">Showing <span class="font-bold text-gray-800 dark:text-white">1</span> to <span class="font-bold text-gray-800 dark:text-white">6</span> of <span class="font-bold text-gray-800 dark:text-white">24</span> fines</span>
+              <div class="flex gap-1">
+                <button class="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"><i class="ph ph-caret-left"></i></button>
+                <button class="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-brand-600 font-bold dark:bg-brand-500/10 dark:text-brand-400">1</button>
+                <button class="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700">2</button>
+                <button class="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700">3</button>
+                <button class="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"><i class="ph ph-caret-right"></i></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <!-- ===== Main Content End ===== -->
+    </div>
+    <!-- ===== Content Area End ===== -->
+  </div>
+  <!-- ===== Page Wrapper End ===== -->
+
+  <!-- Manual Fine Modal -->
+  <div x-show="fineModalOpen"
+    class="fixed inset-0 z-[999999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
+    style="display: none;">
+    <div @click.outside="fineModalOpen = false"
+      class="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl dark:bg-gray-900 md:p-8 my-8">
+      <div class="mb-6 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-500">
+            <i class="ph ph-plus text-2xl"></i>
+          </div>
+          <div>
+            <h3 class="text-2xl font-black text-gray-900 dark:text-white">Log Manual Fine</h3>
+            <p class="text-sm font-medium text-gray-500">Add a new SLA penalty</p>
+          </div>
+        </div>
+        <button @click="fineModalOpen = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          <i class="ph ph-x text-3xl"></i>
+        </button>
+      </div>
+
+      <div class="space-y-5">
+        <div>
+          <label class="mb-2 block text-sm font-bold text-gray-700 dark:text-gray-300">Reference (e.g. Bus #101)</label>
+          <input type="text" x-model="newFine.ref" class="w-full rounded-xl border border-gray-300 bg-transparent px-5 py-3 text-sm outline-hidden focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:text-white" placeholder="Enter vehicle or location ID">
+        </div>
+        <div>
+          <label class="mb-2 block text-sm font-bold text-gray-700 dark:text-gray-300">Violation Category</label>
+          <input type="text" x-model="newFine.violation" class="w-full rounded-xl border border-gray-300 bg-transparent px-5 py-3 text-sm outline-hidden focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:text-white" placeholder="Quick Transit Cleaning – Missed Deadline">
+        </div>
+        <div>
+          <label class="mb-2 block text-sm font-bold text-gray-700 dark:text-gray-300">Violation Type</label>
+          <select x-model="newFine.type" class="w-full rounded-xl border border-gray-300 bg-transparent px-5 py-3 text-sm outline-hidden focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:text-white">
+            <option value="Delay">Delay</option>
+            <option value="Quality">Quality</option>
+            <option value="Missed Schedule">Missed Schedule</option>
+          </select>
+        </div>
+        <div>
+          <label class="mb-2 block text-sm font-bold text-gray-700 dark:text-gray-300">Failure Reason</label>
+          <select x-model="newFine.reason" class="w-full rounded-xl border border-gray-300 bg-transparent px-5 py-3 text-sm outline-hidden focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:text-white">
+            <option value="Staff Shortage">Staff Shortage</option>
+            <option value="Equipment Failure">Equipment Failure</option>
+            <option value="Delay in Bus Arrival">Delay in Bus Arrival</option>
+            <option value="Unsatisfactory Workmanship">Unsatisfactory Workmanship</option>
+          </select>
+        </div>
+        <div>
+          <label class="mb-2 block text-sm font-bold text-gray-700 dark:text-gray-300">Amount (INR)</label>
+          <input type="number" x-model="newFine.amount" class="w-full rounded-xl border border-gray-300 bg-transparent px-5 py-3 text-sm outline-hidden focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:text-white" placeholder="165">
+        </div>
+      </div>
+      
+      <div class="mt-8 flex gap-3">
+        <button @click="fineModalOpen = false" class="flex-1 rounded-xl border border-gray-200 bg-white py-3 font-bold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">Cancel</button>
+        <button @click="addFine()" class="flex-1 rounded-xl bg-brand-500 py-3 font-bold text-white hover:bg-brand-600 transition-colors">Save Fine</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fine Details Modal -->
+  <div x-show="detailsModalOpen"
+    class="fixed inset-0 z-[999999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
+    style="display: none;">
+    <div @click.outside="detailsModalOpen = false"
+      class="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl dark:bg-gray-900 md:p-8 my-8">
+      <template x-if="activeFine">
+        <div>
+          <div class="mb-6 flex items-start justify-between">
+            <div class="flex items-center gap-3">
+              <div class="flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-500">
+                <i class="ph ph-receipt text-2xl"></i>
+              </div>
+              <div>
+                <h3 class="text-2xl font-black text-gray-900 dark:text-white" x-text="activeFine.id"></h3>
+                <p class="text-sm font-medium text-gray-500" x-text="`Issued: ${activeFine.date}`"></p>
+              </div>
+            </div>
+            <button @click="detailsModalOpen = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 mt-2">
+              <i class="ph ph-x text-3xl"></i>
+            </button>
+          </div>
+
+          <div class="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-gray-800 dark:bg-gray-800/50 space-y-4">
+            <div class="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-4">
+              <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Reference</span>
+              <span class="text-sm font-bold text-gray-900 dark:text-white" x-text="activeFine.ref"></span>
+            </div>
+            <div class="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-4">
+              <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Violation Type</span>
+              <span class="text-sm font-bold text-gray-900 dark:text-white" x-text="activeFine.type"></span>
+            </div>
+            <div class="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-4">
+              <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Failure Reason</span>
+              <span class="text-sm font-bold text-gray-900 dark:text-white" x-text="activeFine.reason"></span>
+            </div>
+            <div class="flex flex-col border-b border-gray-200 dark:border-gray-700 pb-4 gap-1">
+              <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Violation Details</span>
+              <span class="text-sm font-bold text-gray-900 dark:text-white" x-text="activeFine.violation"></span>
+              <span class="text-xs text-gray-500 dark:text-gray-400 mt-1"><i class="ph ph-info mr-1"></i> Recorded during QA audit by Supervisor.</span>
+            </div>
+            <div class="flex justify-between items-center pb-2">
+              <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Penalty Amount</span>
+              <span class="text-xl font-black text-error-600 dark:text-error-500" x-text="activeFine.amount"></span>
+            </div>
+          </div>
+
+          <div class="mt-6 flex justify-between items-center">
+            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Current Status:</span>
+            <span class="rounded px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider border"
+                  :class="{
+                    'bg-success-50 text-success-700 border-success-200 dark:bg-success-500/10 dark:text-success-400 dark:border-success-500/20': activeFine.status === 'Paid',
+                    'bg-warning-50 text-warning-700 border-warning-200 dark:bg-warning-500/10 dark:text-warning-400 dark:border-warning-500/20': activeFine.status === 'Pending',
+                    'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-500/20': activeFine.status === 'Appealed',
+                    'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20': activeFine.status === 'Transferred'
+                  }"
+                  x-text="activeFine.status"></span>
+          </div>
+          
+          <div x-show="activeFine.status === 'Pending'" class="mt-8 flex flex-col gap-3 pt-6 border-t border-gray-200 dark:border-gray-700">
+            <div class="flex gap-3">
+              <button @click="appealFine(activeFine.id)" class="flex-1 rounded-xl border border-warning-200 bg-warning-50 py-3 font-bold text-warning-700 hover:bg-warning-100 dark:border-warning-500/30 dark:bg-warning-500/10 dark:text-warning-500 dark:hover:bg-warning-500/20 transition-colors">
+                <i class="ph ph-flag mr-1"></i> Appeal
+              </button>
+              <button @click="payFine(activeFine.id)" class="flex-1 rounded-xl bg-success-500 py-3 font-bold text-white hover:bg-success-600 transition-colors shadow-sm">
+                <i class="ph ph-check-circle mr-1"></i> Pay Now
+              </button>
+            </div>
+            <button @click="transferFine(activeFine.id)" class="w-full rounded-xl bg-blue-600 py-3 font-bold text-white hover:bg-blue-700 transition-colors shadow-sm flex items-center justify-center gap-1.5">
+              <i class="ph ph-arrow-square-out text-lg"></i> Transfer to Vendor
+            </button>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <svg style="visibility: hidden; position: absolute;" width="0" height="0" xmlns="http://www.w3.org/2000/svg" version="1.1">
+    <defs>
+      <filter id="goo" x="-50%" y="-50%" width="200%" height="300%">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
+        <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 19 -9" result="goo" />
+        <feComposite in="SourceGraphic" in2="goo" operator="atop"/>
+      </filter>
+    </defs>
+  </svg>
+</body>
+</html>

@@ -1,0 +1,869 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport"
+    content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+  <title>
+    Depot Manager Dashboard | TransVolt
+  </title>
+  <!-- Phosphor Icons for large, accessible iconography -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+
+<body x-data="{ 
+      page: 'depot', 
+      loaded: true, 
+      darkMode: false, 
+      stickyMenu: false, 
+      sidebarToggle: false, 
+      scrollTop: false,
+      activeCategory: null,
+      busDetailsModalOpen: false,
+      selectedBusId: null,
+      activeTab: 'fleet',
+      selectedDepotSub: null,
+      depotReportModalOpen: false,
+      depotSubmissions: [],
+      timeframe: 30,
+      filterStatus: 'All',
+      loadDepotSubmissions() {
+        const stored = localStorage.getItem('depot_cleaning_submissions');
+        if (stored) {
+          this.depotSubmissions = JSON.parse(stored);
+        } else {
+          // Initialize mock submissions to ensure trends are visible on load
+          const date1 = new Date(); date1.setDate(date1.getDate() - 1);
+          const date2 = new Date(); date2.setDate(date2.getDate() - 2);
+          const date3 = new Date(); date3.setDate(date3.getDate() - 3);
+          
+          this.depotSubmissions = [
+            {
+              id: 'SUB-001',
+              date: date1.toISOString().split('T')[0],
+              day: date1.toLocaleDateString('en-US', { weekday: 'long' }),
+              completedTasks: 12,
+              totalTasks: 13,
+              isIncomplete: true,
+              reasons: ['Shortage of staff'],
+              customProblem: 'Bay 2 mopping was delayed due to missing crew member.',
+              status: 'Approved',
+              rejectionReason: '',
+              submittedAt: '09:30 AM',
+              approvedAt: '11:15 AM',
+              photos: { 'Service Bays': ['https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=300'] }
+            },
+            {
+              id: 'SUB-002',
+              date: date2.toISOString().split('T')[0],
+              day: date2.toLocaleDateString('en-US', { weekday: 'long' }),
+              completedTasks: 13,
+              totalTasks: 13,
+              isIncomplete: false,
+              reasons: [],
+              customProblem: '',
+              status: 'Approved',
+              rejectionReason: '',
+              submittedAt: '10:00 AM',
+              approvedAt: '11:00 AM',
+              photos: {}
+            },
+            {
+              id: 'SUB-003',
+              date: date3.toISOString().split('T')[0],
+              day: date3.toLocaleDateString('en-US', { weekday: 'long' }),
+              completedTasks: 10,
+              totalTasks: 13,
+              isIncomplete: true,
+              reasons: ['Lack of equipment'],
+              customProblem: 'High pressure washer in Pit 1 was out of service.',
+              status: 'Rejected',
+              rejectionReason: 'Please ensure Pit 1 is manually scrubbed and upload photos of clean floor.',
+              submittedAt: '08:45 AM',
+              rejectedAt: '10:15 AM',
+              photos: { 'Washing Pits': ['https://images.unsplash.com/photo-1570125909232-eb263c188f7e?w=300'] }
+            }
+          ];
+          localStorage.setItem('depot_cleaning_submissions', JSON.stringify(this.depotSubmissions));
+        }
+      },
+      getFilteredSubmissions() {
+        const now = new Date();
+        return this.depotSubmissions.filter(sub => {
+          // Timeframe filter
+          const subDate = new Date(sub.date + 'T12:00:00'); // Normalize date parsing
+          const diffTime = Math.abs(now - subDate);
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          if (diffDays > this.timeframe) return false;
+
+          // Status filter
+          if (this.filterStatus !== 'All' && sub.status !== this.filterStatus) return false;
+
+          return true;
+        });
+      },
+      getStats() {
+        const now = new Date();
+        let total = 0;
+        let approved = 0;
+        let rejected = 0;
+        let incomplete = 0;
+        
+        this.depotSubmissions.forEach(sub => {
+          const subDate = new Date(sub.date + 'T12:00:00');
+          const diffTime = Math.abs(now - subDate);
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          if (diffDays <= this.timeframe) {
+            total++;
+            if (sub.status === 'Approved') approved++;
+            if (sub.status === 'Rejected') rejected++;
+            if (sub.isIncomplete) incomplete++;
+          }
+        });
+        
+        const slaAdherence = total > 0 ? Math.round((approved / total) * 100) : 100;
+        return { total, approved, rejected, incomplete, slaAdherence };
+      }
+    }" x-init="
+         darkMode = JSON.parse(localStorage.getItem('darkMode'));
+         $watch('darkMode', value => localStorage.setItem('darkMode', JSON.stringify(value)));
+         loadDepotSubmissions();
+         $watch('activeTab', () => loadDepotSubmissions())"
+  :class="{'dark bg-gray-900': darkMode === true}">
+  <!-- ===== Preloader Start ===== -->
+  <include src="./partials/preloader.html"></include>
+  <!-- ===== Preloader End ===== -->
+
+  <!-- ===== Page Wrapper Start ===== -->
+  <div class="flex h-screen overflow-hidden">
+    <!-- ===== Sidebar Start ===== -->
+    <include src="./partials/sidebar.html"></include>
+    <!-- ===== Sidebar End ===== -->
+
+    <!-- ===== Content Area Start ===== -->
+    <div class="relative flex flex-col flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900">
+      <!-- Small Device Overlay Start -->
+      <include src="./partials/overlay.html" />
+      <!-- Small Device Overlay End -->
+
+      <!-- ===== Header Start ===== -->
+      <include src="./partials/header.html" />
+      <!-- ===== Header End ===== -->
+
+      <!-- ===== Main Content Start ===== -->
+      <main>
+        <div class="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">
+
+          <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h2 class="text-title-md2 font-bold text-gray-800 dark:text-white/90">
+              Depot Overview
+            </h2>
+          </div>
+
+          <!-- Top Stats (Overall Depot Status) -->
+          <div class="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6 mb-8">
+            <div @click="activeCategory = 'fleet'" class="cursor-pointer hover:ring-2 hover:ring-brand-500 hover:shadow-md transition-all rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-white/[0.03]">
+              <div class="flex items-center gap-4">
+                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                  <i class="ph ph-buildings text-2xl"></i>
+                </div>
+                <div>
+                  <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">185</h4>
+                  <span class="text-sm text-gray-500 dark:text-gray-400">Total Fleet</span>
+                </div>
+              </div>
+            </div>
+            
+            <div @click="activeCategory = 'route'" class="cursor-pointer hover:ring-2 hover:ring-brand-500 hover:shadow-md transition-all rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-white/[0.03]">
+              <div class="flex items-center gap-4">
+                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
+                  <i class="ph ph-steering-wheel text-2xl"></i>
+                </div>
+                <div>
+                  <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">142</h4>
+                  <span class="text-sm text-gray-500 dark:text-gray-400">On Route</span>
+                </div>
+              </div>
+            </div>
+
+            <div @click="activeCategory = 'cleaned'" class="cursor-pointer hover:ring-2 hover:ring-brand-500 hover:shadow-md transition-all rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-white/[0.03]">
+              <div class="flex items-center gap-4">
+                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-success-50 text-success-600 dark:bg-success-500/10 dark:text-success-400">
+                  <i class="ph ph-sparkle text-2xl"></i>
+                </div>
+                <div>
+                  <h4 class="text-title-sm font-bold text-gray-800 dark:text-white/90">31</h4>
+                  <span class="text-sm text-gray-500 dark:text-gray-400">Cleaned Today</span>
+                </div>
+              </div>
+            </div>
+
+            <div @click="activeCategory = 'maintenance'" class="cursor-pointer hover:ring-2 hover:ring-error-500 hover:shadow-md transition-all rounded-2xl border border-error-200 bg-error-50 p-5 shadow-sm dark:border-error-900 dark:bg-error-500/10">
+              <div class="flex items-center gap-4">
+                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-error-100 text-error-600 dark:bg-error-500/20 dark:text-error-500">
+                  <i class="ph ph-wrench text-2xl"></i>
+                </div>
+                <div>
+                  <h4 class="text-title-sm font-bold text-error-800 dark:text-error-400">12</h4>
+                  <span class="text-sm text-error-700 dark:text-error-500">Maintenance / Hold</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Main Grid Container -->
+          <div x-show="activeCategory === null" class="space-y-6">
+
+            <!-- Tabs Navigation -->
+            <div class="mb-6 border-b border-gray-200 dark:border-gray-700">
+              <nav class="-mb-px flex gap-6" aria-label="Tabs">
+                <button @click="activeTab = 'fleet'"
+                  class="inline-flex shrink-0 items-center gap-2 border-b-2 px-1 pb-4 text-sm font-semibold transition-colors"
+                  :class="activeTab === 'fleet' ? 'border-brand-500 text-brand-600 dark:text-brand-500' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'">
+                  <i class="ph ph-bus text-lg"></i> Vehicle Fleet Overview
+                </button>
+                <button @click="activeTab = 'depot_cleaning'"
+                  class="inline-flex shrink-0 items-center gap-2 border-b-2 px-1 pb-4 text-sm font-semibold transition-colors"
+                  :class="activeTab === 'depot_cleaning' ? 'border-brand-500 text-brand-600 dark:text-brand-500' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'">
+                  <i class="ph ph-buildings text-lg"></i> Depot Cleaning Logs
+                </button>
+              </nav>
+            </div>
+
+            <!-- Tab 1: Vehicle Fleet Overview -->
+            <div x-show="activeTab === 'fleet'" class="grid grid-cols-1 gap-6 xl:grid-cols-3">
+
+            <!-- Column 1: Performance KPIs & Staff Overview -->
+            <div class="xl:col-span-2 space-y-6">
+              
+              <!-- Performance KPIs -->
+              <div x-data="{ trendPeriod: '7 Days' }" class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-800">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+                  <h3 class="text-lg font-bold text-gray-800 dark:text-white/90">Performance KPIs</h3>
+                  <div class="flex items-center gap-2 mt-2 sm:mt-0">
+                    <button @click="trendPeriod = '7 Days'" :class="trendPeriod === '7 Days' ? 'bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400 border border-brand-200 dark:border-brand-800' : 'bg-white text-gray-600 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700'" class="px-3 py-1 text-xs font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">7 Days</button>
+                    <button @click="trendPeriod = '30 Days'" :class="trendPeriod === '30 Days' ? 'bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400 border border-brand-200 dark:border-brand-800' : 'bg-white text-gray-600 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700'" class="px-3 py-1 text-xs font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">30 Days</button>
+                    <button @click="trendPeriod = '3 Months'" :class="trendPeriod === '3 Months' ? 'bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400 border border-brand-200 dark:border-brand-800' : 'bg-white text-gray-600 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700'" class="px-3 py-1 text-xs font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">3 Months</button>
+                  </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <!-- SLA Adherence -->
+                  <div>
+                    <div class="flex justify-between items-end mb-2">
+                      <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Cleaning SLA Adherence</span>
+                      <span class="text-xl font-bold text-success-600 dark:text-success-400" x-text="trendPeriod === '7 Days' ? '92%' : trendPeriod === '30 Days' ? '88%' : '85%'">92%</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 h-2.5">
+                      <template x-for="i in 10">
+                        <span 
+                          class="h-2.5 w-2.5 rounded-full transition-all duration-300"
+                          :class="i * 10 <= (trendPeriod === '7 Days' ? 92 : trendPeriod === '30 Days' ? 88 : 85) ? 'bg-success-500' : 'bg-gray-200 dark:bg-gray-700'"
+                        ></span>
+                      </template>
+                    </div>
+                  </div>
+                  <!-- QA Pass Rate -->
+                  <div>
+                    <div class="flex justify-between items-end mb-2">
+                      <span class="text-sm font-medium text-gray-500 dark:text-gray-400">First-Time QA Pass Rate</span>
+                      <span class="text-xl font-bold" :class="trendPeriod === '7 Days' ? 'text-warning-600 dark:text-warning-400' : 'text-success-600 dark:text-success-400'" x-text="trendPeriod === '7 Days' ? '78%' : trendPeriod === '30 Days' ? '82%' : '86%'">78%</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 h-2.5">
+                      <template x-for="i in 10">
+                        <span 
+                          class="h-2.5 w-2.5 rounded-full transition-all duration-300"
+                          :class="i * 10 <= (trendPeriod === '7 Days' ? 78 : trendPeriod === '30 Days' ? 82 : 86) 
+                            ? (trendPeriod === '7 Days' ? 'bg-warning-500' : 'bg-success-500') 
+                            : 'bg-gray-200 dark:bg-gray-700'"
+                        ></span>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+                <div class="mt-6 pt-6 border-t border-gray-100 dark:border-gray-700">
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Avg. Cleaning Time</span>
+                    <span class="text-lg font-bold text-gray-800 dark:text-white" x-text="trendPeriod === '7 Days' ? '10m 15s' : trendPeriod === '30 Days' ? '11m 30s' : '12m 45s'">10m 15s</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Staff & Shift Progress -->
+              <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-800">
+                <h3 class="text-lg font-bold text-gray-800 dark:text-white/90 mb-4">Active Shift Staff</h3>
+                <div class="overflow-x-auto">
+                  <table class="w-full text-left text-sm text-gray-500 dark:text-gray-400">
+                    <thead class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+                      <tr>
+                        <th scope="col" class="px-4 py-3 rounded-l-lg">Name</th>
+                        <th scope="col" class="px-4 py-3">Role</th>
+                        <th scope="col" class="px-4 py-3">Buses Handled</th>
+                        <th scope="col" class="px-4 py-3 rounded-r-lg">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr class="border-b dark:border-gray-700">
+                        <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">Sarah M.</td>
+                        <td class="px-4 py-3">Cleaning Crew</td>
+                        <td class="px-4 py-3">12</td>
+                        <td class="px-4 py-3">
+                          <span class="rounded-full bg-success-100 px-2 py-1 text-xs font-medium text-success-800 dark:bg-success-900/30 dark:text-success-500">Active</span>
+                        </td>
+                      </tr>
+                      <tr class="border-b dark:border-gray-700">
+                        <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">John D.</td>
+                        <td class="px-4 py-3">Cleaning Crew</td>
+                        <td class="px-4 py-3">8</td>
+                        <td class="px-4 py-3">
+                          <span class="rounded-full bg-success-100 px-2 py-1 text-xs font-medium text-success-800 dark:bg-success-900/30 dark:text-success-500">Active</span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">Alex P.</td>
+                        <td class="px-4 py-3">Fleet Manager</td>
+                        <td class="px-4 py-3">20 (QA)</td>
+                        <td class="px-4 py-3">
+                          <span class="rounded-full bg-warning-100 px-2 py-1 text-xs font-medium text-warning-800 dark:bg-warning-900/30 dark:text-warning-500">On Break</span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- Column 2: Critical Alerts -->
+            <div class="space-y-6">
+              <h3 class="text-lg font-bold text-error-600 dark:text-error-500 flex items-center gap-2">
+                <i class="ph ph-warning-circle text-xl"></i> Critical Alerts
+              </h3>
+              
+              <!-- Alert Card 1 -->
+              <div class="rounded-2xl border-l-4 border-error-500 bg-white p-5 shadow-sm dark:bg-gray-800">
+                <div class="flex items-start gap-3">
+                  <div class="mt-0.5 text-error-500">
+                    <i class="ph ph-warning-octagon text-2xl"></i>
+                  </div>
+                  <div>
+                    <h4 class="text-sm font-bold text-gray-900 dark:text-white">Bus #821 Hold - Major Damage</h4>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Seat slashed, requires maintenance team override. QA rejected by Alex P.</p>
+                    <span class="mt-2 inline-block text-xs font-medium text-gray-400">15 mins ago</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Alert Card 2 -->
+              <div class="rounded-2xl border-l-4 border-warning-500 bg-white p-5 shadow-sm dark:bg-gray-800">
+                <div class="flex items-start gap-3">
+                  <div class="mt-0.5 text-warning-500">
+                    <i class="ph ph-clock text-2xl"></i>
+                  </div>
+                  <div>
+                    <h4 class="text-sm font-bold text-gray-900 dark:text-white">SLA Breach Warning</h4>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Bay 1 cleaning taking > 20 mins. Reported reason: Spill.</p>
+                    <span class="mt-2 inline-block text-xs font-medium text-gray-400">45 mins ago</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Export Button -->
+              <div class="pt-4">
+                <button class="w-full flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white py-3 text-sm font-bold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 shadow-sm">
+                  <i class="ph ph-download-simple text-lg"></i> Export Daily Report
+                </button>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Tab 2: Depot Cleaning Logs -->
+            <div x-show="activeTab === 'depot_cleaning'" style="display: none;" class="space-y-6">
+              
+              <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-800">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+                  <div>
+                    <h3 class="text-lg font-bold text-gray-800 dark:text-white">Daily Depot Cleaning Logs</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Read-only history of depot sanitation audits and supervisor submissions.</p>
+                  </div>
+                  
+                  <!-- Filter controls -->
+                  <div class="flex flex-wrap items-center gap-3">
+                    <!-- Status Filter -->
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-xs font-bold text-gray-400 uppercase">Status:</span>
+                      <select x-model="filterStatus" class="h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-transparent px-3 text-sm text-gray-800 dark:text-white focus:outline-none">
+                        <option value="All" class="dark:bg-gray-800">All Statuses</option>
+                        <option value="Pending" class="dark:bg-gray-800">Pending</option>
+                        <option value="Approved" class="dark:bg-gray-800">Approved</option>
+                        <option value="Rejected" class="dark:bg-gray-800">Rejected</option>
+                      </select>
+                    </div>
+
+                    <!-- Timeframe Filter -->
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-xs font-bold text-gray-400 uppercase">Timeframe:</span>
+                      <select x-model.number="timeframe" class="h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-transparent px-3 text-sm text-gray-800 dark:text-white focus:outline-none">
+                        <option value="7" class="dark:bg-gray-800">Last 7 Days</option>
+                        <option value="30" class="dark:bg-gray-800">Last 30 Days</option>
+                        <option value="90" class="dark:bg-gray-800">Last 90 Days</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Depot Cleaning SLA & Audit Trends -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
+                  <!-- Total Submissions -->
+                  <div class="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40 p-4">
+                    <span class="text-xs font-bold text-gray-400 dark:text-gray-400 uppercase block mb-1">Total Logs</span>
+                    <div class="flex items-baseline gap-2">
+                      <span class="text-3xl font-black text-gray-800 dark:text-white" x-text="getStats().total">0</span>
+                      <span class="text-xs text-gray-500 dark:text-gray-400 font-semibold">Reports</span>
+                    </div>
+                  </div>
+
+                  <!-- Approved Submissions -->
+                  <div class="rounded-xl border border-success-100/50 dark:border-success-900/20 bg-success-50/20 dark:bg-success-500/5 p-4">
+                    <span class="text-xs font-bold text-success-600 dark:text-success-400 uppercase block mb-1">Approved Reports</span>
+                    <div class="flex items-baseline gap-2">
+                      <span class="text-3xl font-black text-success-600 dark:text-success-400" x-text="getStats().approved">0</span>
+                      <span class="text-xs text-success-600 dark:text-success-400 font-semibold">Passed QA</span>
+                    </div>
+                  </div>
+
+                  <!-- Rejected Submissions -->
+                  <div class="rounded-xl border border-error-100/50 dark:border-error-900/20 bg-error-50/20 dark:bg-error-500/5 p-4">
+                    <span class="text-xs font-bold text-error-600 dark:text-error-400 uppercase block mb-1">Rejected Reports</span>
+                    <div class="flex items-baseline gap-2">
+                      <span class="text-3xl font-black text-error-600 dark:text-error-400" x-text="getStats().rejected">0</span>
+                      <span class="text-xs text-error-600 dark:text-error-400 font-semibold">Failed QA</span>
+                    </div>
+                  </div>
+
+                  <!-- Flagged Incomplete -->
+                  <div class="rounded-xl border border-warning-100/50 dark:border-warning-900/20 bg-warning-50/20 dark:bg-warning-500/5 p-4">
+                    <span class="text-xs font-bold text-warning-600 dark:text-warning-400 uppercase block mb-1">Incomplete Logs</span>
+                    <div class="flex items-baseline gap-2">
+                      <span class="text-3xl font-black text-warning-600 dark:text-warning-400" x-text="getStats().incomplete">0</span>
+                      <span class="text-xs text-warning-600 dark:text-warning-400 font-semibold">Exceptions</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- SLA Progress -->
+                <div class="mb-8 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/20">
+                  <div class="flex justify-between items-center mb-2">
+                    <span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Depot Cleaning SLA Target Adherence (Target: 95%)</span>
+                    <span class="text-sm font-bold" :class="getStats().slaAdherence >= 95 ? 'text-success-600 dark:text-success-400' : 'text-warning-600 dark:text-warning-400'" x-text="getStats().slaAdherence + '%'"></span>
+                  </div>
+                  <div class="w-full bg-gray-200 dark:bg-gray-700 h-2.5 rounded-full overflow-hidden">
+                    <div class="h-full rounded-full transition-all duration-[600ms]"
+                      :class="getStats().slaAdherence >= 95 ? 'bg-success-500' : 'bg-warning-500'"
+                      :style="`width: ${getStats().slaAdherence}%`"></div>
+                  </div>
+                </div>
+
+                <!-- Table -->
+                <div class="overflow-x-auto">
+                  <table class="w-full text-left text-sm text-gray-500 dark:text-gray-400">
+                    <thead class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">
+                      <tr>
+                        <th scope="col" class="px-6 py-4">Report ID</th>
+                        <th scope="col" class="px-6 py-4">Submission Date</th>
+                        <th scope="col" class="px-6 py-4">Completion</th>
+                        <th scope="col" class="px-6 py-4">Incomplete Flag</th>
+                        <th scope="col" class="px-6 py-4">Status</th>
+                        <th scope="col" class="px-6 py-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <template x-for="sub in getFilteredSubmissions()" :key="sub.id">
+                        <tr class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                          <td class="px-6 py-4 font-bold text-gray-900 dark:text-white" x-text="sub.id"></td>
+                          <td class="px-6 py-4">
+                            <span x-text="sub.day + ', ' + sub.date"></span>
+                            <span class="text-xs text-gray-400 block" x-text="'at ' + sub.submittedAt"></span>
+                          </td>
+                          <td class="px-6 py-4 font-semibold text-gray-800 dark:text-gray-200">
+                            <span class="bg-gray-100 dark:bg-gray-700 px-2.5 py-1 rounded-md text-xs" x-text="sub.completedTasks + '/' + sub.totalTasks + ' Tasks'"></span>
+                          </td>
+                          <td class="px-6 py-4">
+                            <template x-if="sub.isIncomplete">
+                              <span class="rounded bg-error-50 dark:bg-error-500/10 px-2 py-0.5 text-xs font-bold text-error-600 dark:text-error-500 border border-error-100 dark:border-error-500/25">Yes</span>
+                            </template>
+                            <template x-if="!sub.isIncomplete">
+                              <span class="rounded bg-success-50 dark:bg-success-500/10 px-2 py-0.5 text-xs font-bold text-success-600 dark:text-success-500 border border-success-100 dark:border-success-500/25">No</span>
+                            </template>
+                          </td>
+                          <td class="px-6 py-4">
+                            <span class="rounded-full px-2.5 py-1 text-xs font-bold uppercase tracking-wider"
+                              :class="sub.status === 'Approved' ? 'bg-success-100 text-success-800 dark:bg-success-500/20 dark:text-success-400' : 
+                                      sub.status === 'Rejected' ? 'bg-error-100 text-error-800 dark:bg-error-500/20 dark:text-error-400' :
+                                      'bg-warning-100 text-warning-800 dark:bg-warning-500/20 dark:text-warning-400'">
+                              <span x-text="sub.status"></span>
+                            </span>
+                          </td>
+                          <td class="px-6 py-4 text-right">
+                            <button @click="selectedDepotSub = sub; depotReportModalOpen = true" class="text-brand-600 hover:text-brand-800 font-semibold text-sm dark:text-brand-400">
+                              View Details
+                            </button>
+                          </td>
+                        </tr>
+                      </template>
+                      
+                      <!-- Empty State -->
+                      <tr x-show="getFilteredSubmissions().length === 0">
+                        <td colspan="6" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400 font-medium">
+                          <i class="ph ph-note-blank text-3xl block mb-2 text-gray-300"></i>
+                          No depot cleaning logs found for the selected timeframe.
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Category Details View (Drill-down) -->
+          <div x-show="activeCategory !== null" style="display: none;">
+            <div class="mb-6 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <button @click="activeCategory = null" class="flex h-10 w-10 items-center justify-center rounded-xl bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">
+                  <i class="ph ph-arrow-left text-xl"></i>
+                </button>
+                <h3 class="text-xl font-bold text-gray-800 dark:text-white" x-text="
+                  activeCategory === 'fleet' ? 'Total Fleet Details' :
+                  activeCategory === 'route' ? 'Buses On Route' :
+                  activeCategory === 'cleaned' ? 'Buses Cleaned Today' :
+                  'Maintenance / Hold Overview'
+                "></h3>
+              </div>
+            </div>
+
+            <!-- List of Buses -->
+            <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-800 overflow-hidden">
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm text-gray-500 dark:text-gray-400">
+                  <thead class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">
+                    <tr>
+                      <th scope="col" class="px-6 py-4">Bus ID</th>
+                      <th scope="col" class="px-6 py-4">Type</th>
+                      <th scope="col" class="px-6 py-4">Status</th>
+                      <th scope="col" class="px-6 py-4 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <!-- Mock Data rows -->
+                    <tr x-show="activeCategory === 'fleet' || activeCategory === 'maintenance'" @click="selectedBusId = 'Bus #821'; busDetailsModalOpen = true" class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors">
+                      <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">Bus #821</td>
+                      <td class="px-6 py-4">ICE, Double Decker</td>
+                      <td class="px-6 py-4">
+                        <span class="rounded bg-error-100 px-2.5 py-0.5 text-xs font-bold text-error-800 dark:bg-error-500/20 dark:text-error-400">Hold - Major Damage</span>
+                      </td>
+                      <td class="px-6 py-4 text-right">
+                        <button class="text-brand-600 hover:text-brand-800 font-medium dark:text-brand-400">View Details</button>
+                      </td>
+                    </tr>
+                    <tr x-show="activeCategory === 'fleet' || activeCategory === 'cleaned'" @click="selectedBusId = 'Bus #402'; busDetailsModalOpen = true" class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors">
+                      <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">Bus #402</td>
+                      <td class="px-6 py-4">EV, Single Decker</td>
+                      <td class="px-6 py-4">
+                        <span class="rounded bg-success-100 px-2.5 py-0.5 text-xs font-bold text-success-800 dark:bg-success-500/20 dark:text-success-400">Cleaned (Ready)</span>
+                      </td>
+                      <td class="px-6 py-4 text-right">
+                        <button class="text-brand-600 hover:text-brand-800 font-medium dark:text-brand-400">View Details</button>
+                      </td>
+                    </tr>
+                    <tr x-show="activeCategory === 'fleet' || activeCategory === 'route'" @click="selectedBusId = 'Bus #108'; busDetailsModalOpen = true" class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors">
+                      <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">Bus #108</td>
+                      <td class="px-6 py-4">EV, Single Decker</td>
+                      <td class="px-6 py-4">
+                        <span class="rounded bg-warning-100 px-2.5 py-0.5 text-xs font-bold text-warning-800 dark:bg-warning-500/20 dark:text-warning-400">In Transit</span>
+                      </td>
+                      <td class="px-6 py-4 text-right">
+                        <button class="text-brand-600 hover:text-brand-800 font-medium dark:text-brand-400">View Details</button>
+                      </td>
+                    </tr>
+                    <tr x-show="activeCategory === 'fleet' || activeCategory === 'cleaned'" @click="selectedBusId = 'Bus #988'; busDetailsModalOpen = true" class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors">
+                      <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">Bus #988</td>
+                      <td class="px-6 py-4">EV, Articulated</td>
+                      <td class="px-6 py-4">
+                        <span class="rounded bg-brand-50 px-2.5 py-0.5 text-xs font-bold text-brand-600 dark:bg-brand-500/20 dark:text-brand-400">Ready for QA</span>
+                      </td>
+                      <td class="px-6 py-4 text-right">
+                        <button class="text-brand-600 hover:text-brand-800 font-medium dark:text-brand-400">View Details</button>
+                      </td>
+                    </tr>
+                    <tr x-show="activeCategory === 'fleet' || activeCategory === 'cleaned'" @click="selectedBusId = 'Bus #111'; busDetailsModalOpen = true" class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors">
+                      <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">Bus #111</td>
+                      <td class="px-6 py-4">ICE, Single Decker</td>
+                      <td class="px-6 py-4">
+                        <span class="rounded bg-brand-50 px-2.5 py-0.5 text-xs font-bold text-brand-600 dark:bg-brand-500/20 dark:text-brand-400">Ready for QA</span>
+                      </td>
+                      <td class="px-6 py-4 text-right">
+                        <button class="text-brand-600 hover:text-brand-800 font-medium dark:text-brand-400">View Details</button>
+                      </td>
+                    </tr>
+                    <tr x-show="activeCategory === 'fleet' || activeCategory === 'cleaned'" @click="selectedBusId = 'Bus #202'; busDetailsModalOpen = true" class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors">
+                      <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">Bus #202</td>
+                      <td class="px-6 py-4">EV, Single Decker</td>
+                      <td class="px-6 py-4">
+                        <span class="rounded bg-error-100 px-2.5 py-0.5 text-xs font-bold text-error-800 dark:bg-error-500/20 dark:text-error-400">Audit Failed</span>
+                      </td>
+                      <td class="px-6 py-4 text-right">
+                        <button class="text-brand-600 hover:text-brand-800 font-medium dark:text-brand-400">View Details</button>
+                      </td>
+                    </tr>
+                    <tr x-show="activeCategory === 'fleet' || activeCategory === 'cleaned'" @click="selectedBusId = 'Bus #707'; busDetailsModalOpen = true" class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors">
+                      <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">Bus #707</td>
+                      <td class="px-6 py-4">EV, Single Decker</td>
+                      <td class="px-6 py-4">
+                        <span class="rounded bg-brand-50 px-2.5 py-0.5 text-xs font-bold text-brand-600 dark:bg-brand-500/20 dark:text-brand-400">Ready for QA</span>
+                      </td>
+                      <td class="px-6 py-4 text-right">
+                        <button class="text-brand-600 hover:text-brand-800 font-medium dark:text-brand-400">View Details</button>
+                      </td>
+                    </tr>
+                    <tr x-show="activeCategory === 'fleet' || activeCategory === 'cleaned'" @click="selectedBusId = 'Bus #445'; busDetailsModalOpen = true" class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors">
+                      <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">Bus #445</td>
+                      <td class="px-6 py-4">EV, Double Decker</td>
+                      <td class="px-6 py-4">
+                        <span class="rounded bg-gray-100 px-2.5 py-0.5 text-xs font-bold text-gray-800 dark:bg-gray-500/20 dark:text-gray-400">Cleaning in Progress</span>
+                      </td>
+                      <td class="px-6 py-4 text-right">
+                        <button class="text-brand-600 hover:text-brand-800 font-medium dark:text-brand-400">View Details</button>
+                      </td>
+                    </tr>
+                    <tr x-show="activeCategory === 'fleet' || activeCategory === 'maintenance'" @click="selectedBusId = 'Bus #567'; busDetailsModalOpen = true" class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors">
+                      <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">Bus #567</td>
+                      <td class="px-6 py-4">ICE, Single Decker</td>
+                      <td class="px-6 py-4">
+                        <span class="rounded bg-purple-100 px-2.5 py-0.5 text-xs font-bold text-purple-800 dark:bg-purple-500/20 dark:text-purple-400">Maintenance</span>
+                      </td>
+                      <td class="px-6 py-4 text-right">
+                        <button class="text-brand-600 hover:text-brand-800 font-medium dark:text-brand-400">View Details</button>
+                      </td>
+                    </tr>
+                    <tr x-show="activeCategory === 'fleet' || activeCategory === 'cleaned'" @click="selectedBusId = 'Bus #678'; busDetailsModalOpen = true" class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors">
+                      <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">Bus #678</td>
+                      <td class="px-6 py-4">EV, Single Decker</td>
+                      <td class="px-6 py-4">
+                        <span class="rounded bg-success-100 px-2.5 py-0.5 text-xs font-bold text-success-800 dark:bg-success-500/20 dark:text-success-400">Cleaned (Ready)</span>
+                      </td>
+                      <td class="px-6 py-4 text-right">
+                        <button class="text-brand-600 hover:text-brand-800 font-medium dark:text-brand-400">View Details</button>
+                      </td>
+                    </tr>
+                    <tr x-show="activeCategory === 'fleet' || activeCategory === 'route'" @click="selectedBusId = 'Bus #789'; busDetailsModalOpen = true" class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors">
+                      <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">Bus #789</td>
+                      <td class="px-6 py-4">ICE, Articulated</td>
+                      <td class="px-6 py-4">
+                        <span class="rounded bg-warning-100 px-2.5 py-0.5 text-xs font-bold text-warning-800 dark:bg-warning-500/20 dark:text-warning-400">In Transit</span>
+                      </td>
+                      <td class="px-6 py-4 text-right">
+                        <button class="text-brand-600 hover:text-brand-800 font-medium dark:text-brand-400">View Details</button>
+                      </td>
+                    </tr>
+                    <tr x-show="activeCategory === 'fleet' || activeCategory === 'cleaned'" @click="selectedBusId = 'Bus #890'; busDetailsModalOpen = true" class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors">
+                      <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">Bus #890</td>
+                      <td class="px-6 py-4">EV, Double Decker</td>
+                      <td class="px-6 py-4">
+                        <span class="rounded bg-success-100 px-2.5 py-0.5 text-xs font-bold text-success-800 dark:bg-success-500/20 dark:text-success-400">Cleaned (Ready)</span>
+                      </td>
+                      <td class="px-6 py-4 text-right">
+                        <button class="text-brand-600 hover:text-brand-800 font-medium dark:text-brand-400">View Details</button>
+                      </td>
+                    </tr>
+                    <tr x-show="activeCategory === 'fleet' || activeCategory === 'route'" @click="selectedBusId = 'Bus #901'; busDetailsModalOpen = true" class="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors">
+                      <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">Bus #901</td>
+                      <td class="px-6 py-4">ICE, Single Decker</td>
+                      <td class="px-6 py-4">
+                        <span class="rounded bg-warning-100 px-2.5 py-0.5 text-xs font-bold text-warning-800 dark:bg-warning-500/20 dark:text-warning-400">In Transit</span>
+                      </td>
+                      <td class="px-6 py-4 text-right">
+                        <button class="text-brand-600 hover:text-brand-800 font-medium dark:text-brand-400">View Details</button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </main>
+      <!-- ===== Main Content End ===== -->
+    </div>
+    <!-- ===== Content Area End ===== -->
+  </div>
+  <!-- ===== Page Wrapper End ===== -->
+  <!-- Bus Details Modal -->
+  <div x-show="busDetailsModalOpen"
+    class="fixed inset-0 z-[999999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
+    style="display: none;">
+    <div @click.outside="busDetailsModalOpen = false"
+      class="w-full max-w-2xl rounded-3xl bg-white p-6 shadow-2xl dark:bg-gray-900 md:p-8 my-8">
+      <div class="mb-6 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div
+            class="flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-500">
+            <i class="ph ph-bus text-2xl"></i>
+          </div>
+          <div>
+            <h3 class="text-2xl font-black text-gray-900 dark:text-white" x-text="selectedBusId"></h3>
+            <p class="text-sm font-medium text-gray-500">Bus Details & Status</p>
+          </div>
+        </div>
+        <button @click="busDetailsModalOpen = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          <i class="ph ph-x text-3xl"></i>
+        </button>
+      </div>
+
+      <div class="space-y-6">
+        <!-- Quick Info -->
+        <div class="grid grid-cols-2 gap-4">
+          <div class="rounded-xl bg-gray-50 p-4 border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+            <span class="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase block mb-1">Status</span>
+            <span class="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-error-500"></span> Hold - Major Damage
+            </span>
+          </div>
+          <div class="rounded-xl bg-gray-50 p-4 border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+            <span class="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase block mb-1">Last Cleaned By</span>
+            <span class="font-medium text-gray-900 dark:text-white">John D. (Supervisor)</span>
+          </div>
+        </div>
+
+        <!-- Latest Photos -->
+        <h4 class="font-bold text-gray-800 dark:text-white mt-4 flex items-center gap-2"><i class="ph ph-image text-xl"></i> Recent Photos</h4>
+        <div class="grid grid-cols-2 gap-4">
+          <!-- Photo 1 -->
+          <div class="h-40 w-full rounded-xl bg-gray-200 dark:bg-gray-800 overflow-hidden relative group">
+            <img src="https://images.unsplash.com/photo-1570125909232-eb263c188f7e?w=800&auto=format&fit=crop" class="object-cover w-full h-full opacity-90 group-hover:opacity-100 transition-opacity" alt="Seats">
+            <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-3">
+              <span class="text-white text-xs font-medium">Seats Check</span>
+            </div>
+          </div>
+          <!-- Photo 2 -->
+          <div class="h-40 w-full rounded-xl bg-gray-200 dark:bg-gray-800 overflow-hidden relative group">
+            <img src="https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800&auto=format&fit=crop" class="object-cover w-full h-full opacity-90 group-hover:opacity-100 transition-opacity" alt="Floor">
+            <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-3">
+              <span class="text-white text-xs font-medium">Floor Swept</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Action / History Notes -->
+        <div class="rounded-xl border border-error-200 bg-error-50 p-4 dark:border-error-900/50 dark:bg-error-500/10">
+          <h4 class="font-bold text-error-800 dark:text-error-400 mb-2 flex items-center gap-2"><i class="ph ph-note-pencil text-lg"></i> Exception Notes</h4>
+          <p class="text-sm text-error-700 dark:text-error-500">Seat slashed in upper deck. Requires maintenance team override. QA rejected by Alex P.</p>
+        </div>
+
+      </div>
+
+      <button @click="busDetailsModalOpen = false"
+        class="mt-8 w-full rounded-xl bg-gray-800 py-4 text-lg font-extrabold text-white transition-colors hover:bg-gray-900 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white shadow-lg">
+        CLOSE DETAILS
+      </button>
+    </div>
+  </div>
+
+  <!-- Depot Report Details Modal (Read-Only) -->
+  <div x-show="depotReportModalOpen"
+    class="fixed inset-0 z-[999999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
+    style="display: none;">
+    <div @click.outside="depotReportModalOpen = false"
+      class="w-full max-w-2xl rounded-3xl bg-white p-6 shadow-2xl dark:bg-gray-900 md:p-8 my-8"
+      x-data="{ activeReportPhoto: null }">
+      
+      <div class="mb-6 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-500">
+            <i class="ph ph-buildings text-2xl"></i>
+          </div>
+          <div>
+            <h3 class="text-2xl font-black text-gray-900 dark:text-white" x-text="selectedDepotSub ? selectedDepotSub.id : ''"></h3>
+            <p class="text-sm font-medium text-gray-500">Depot Cleaning Audit Details</p>
+          </div>
+        </div>
+        <button @click="depotReportModalOpen = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          <i class="ph ph-x text-3xl"></i>
+        </button>
+      </div>
+
+      <div class="space-y-6" x-show="selectedDepotSub !== null">
+        <!-- Status & Meta -->
+        <div class="grid grid-cols-2 gap-4">
+          <div class="rounded-xl bg-gray-50 p-4 border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+            <span class="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase block mb-1">QA Approval Status</span>
+            <span class="font-bold flex items-center gap-2"
+              :class="selectedDepotSub?.status === 'Approved' ? 'text-success-600 dark:text-success-400' : 
+                      selectedDepotSub?.status === 'Rejected' ? 'text-error-600 dark:text-error-400' : 'text-warning-600 dark:text-warning-400'">
+              <span class="w-2.5 h-2.5 rounded-full"
+                :class="selectedDepotSub?.status === 'Approved' ? 'bg-success-500' : 
+                        selectedDepotSub?.status === 'Rejected' ? 'bg-error-500' : 'bg-warning-500'"></span>
+              <span x-text="selectedDepotSub?.status"></span>
+            </span>
+          </div>
+          <div class="rounded-xl bg-gray-50 p-4 border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+            <span class="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase block mb-1">Submitted On</span>
+            <span class="font-medium text-gray-900 dark:text-white" x-text="selectedDepotSub ? selectedDepotSub.day + ', ' + selectedDepotSub.date + ' ' + selectedDepotSub.submittedAt : ''"></span>
+          </div>
+        </div>
+
+        <!-- Task Completion KPI -->
+        <div class="rounded-xl bg-gray-50 p-4 border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+          <span class="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase block mb-1">Checklist Progress</span>
+          <div class="flex items-center justify-between">
+            <span class="text-lg font-bold text-gray-800 dark:text-white" x-text="selectedDepotSub ? selectedDepotSub.completedTasks + '/' + selectedDepotSub.totalTasks + ' Tasks Completed' : ''"></span>
+            <span class="text-sm font-semibold text-brand-500" x-text="selectedDepotSub ? Math.round((selectedDepotSub.completedTasks / selectedDepotSub.totalTasks) * 100) + '%' : ''"></span>
+          </div>
+        </div>
+
+        <!-- Rejection Reason (If Rejected) -->
+        <div x-show="selectedDepotSub?.status === 'Rejected'" class="rounded-xl border border-error-200 bg-error-50 dark:bg-error-500/10 dark:border-error-500/25 p-4">
+          <h4 class="font-bold text-error-800 dark:text-error-400 mb-1.5 flex items-center gap-2"><i class="ph ph-x-circle text-lg"></i> Rejection Reason</h4>
+          <p class="text-sm text-error-700 dark:text-error-500" x-text="selectedDepotSub?.rejectionReason || 'No feedback provided.'"></p>
+        </div>
+
+        <!-- Incomplete Details Section (If Flagged Incomplete) -->
+        <div x-show="selectedDepotSub?.isIncomplete" class="rounded-xl border border-warning-200 bg-warning-50/50 dark:bg-warning-500/10 dark:border-warning-500/20 p-4">
+          <h4 class="font-bold text-warning-800 dark:text-warning-400 mb-2 flex items-center gap-2"><i class="ph ph-warning text-lg"></i> Incomplete Cleaning Logged</h4>
+          <p class="text-sm text-gray-700 dark:text-gray-300"><strong>Flagged Reasons:</strong> <span x-text="selectedDepotSub?.reasons.join(', ') || 'None'"></span></p>
+          <p x-show="selectedDepotSub?.customProblem" class="text-sm text-gray-800 dark:text-gray-300 mt-1.5"><strong>Additional Notes:</strong> <span x-text="selectedDepotSub?.customProblem"></span></p>
+        </div>
+
+        <!-- Submitted Photos -->
+        <div x-show="selectedDepotSub && Object.values(selectedDepotSub.photos || {}).flat().length > 0">
+          <h4 class="font-bold text-gray-800 dark:text-white mb-3 flex items-center gap-2"><i class="ph ph-image text-xl"></i> Submitted Documentation</h4>
+          
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <template x-for="img in Object.values(selectedDepotSub?.photos || {}).flat()" :key="img">
+              <div class="h-32 w-full rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-100 relative group cursor-pointer" @click="activeReportPhoto = img">
+                <img :src="img" class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300" alt="Depot Photo">
+              </div>
+            </template>
+          </div>
+
+          <!-- Enlarged Image Viewer in Modal -->
+          <div x-show="activeReportPhoto" class="mt-4 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800 relative bg-black flex items-center justify-center p-2">
+            <img :src="activeReportPhoto" class="max-h-[300px] object-contain rounded-lg" alt="Full size photo">
+            <button @click="activeReportPhoto = null" class="absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors">
+              <i class="ph ph-x"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <button @click="depotReportModalOpen = false"
+        class="mt-8 w-full rounded-xl bg-gray-800 py-4 text-lg font-extrabold text-white transition-colors hover:bg-gray-900 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white shadow-lg">
+        CLOSE LOG
+      </button>
+    </div>
+  </div>
+</body>
+</html>

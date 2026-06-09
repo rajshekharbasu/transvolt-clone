@@ -1,0 +1,6 @@
+node_modules
+package-lock.json
+/build
+.vercel
+gh_2.93.0_macOS_arm64/
+.env*.local
