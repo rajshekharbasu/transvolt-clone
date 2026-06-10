@@ -30,7 +30,62 @@
       photoModalOpen: false,
       activeBusToAudit: null,
       quickTagSelected: null,
-      activeTab: 'cleaning'
+      activeTab: 'cleaning',
+      
+      // Fine & Photo Rejection State
+      selectedFineType: 'shortage',
+      rejectionNotes: '',
+      attachedPhoto: null,
+      fineTypes: {
+        shortage: { label: 'Staff shortage', amount: 165 },
+        interior: { label: 'Poor interior cleaning', amount: 250 },
+        aisle: { label: 'Uncleaned rear aisle', amount: 500 },
+        missed: { label: 'Missed cleaning slot', amount: 1000 }
+      },
+      handlePhotoUpload(event) {
+        const file = event.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            this.attachedPhoto = e.target.result;
+          };
+          reader.readAsDataURL(file);
+        }
+      },
+      confirmRejection() {
+        let stored = localStorage.getItem('reworks_tickets');
+        let reworks = stored ? JSON.parse(stored) : [
+          { id: 1, ref: 'Bus #821', type: 'Deep Clean', location: 'Bay 12', reason: 'Trash remaining in rear aisle', amount: 500, fineAccepted: false, retried: false, retryCount: 0, photo: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=600' },
+          { id: 2, ref: 'Service Bay 2', type: 'Depot Cleaning', location: 'Maintenance Area', reason: 'Oil spillages not fully absorbed', amount: 165, fineAccepted: false, retried: false, retryCount: 0, photo: 'https://images.unsplash.com/photo-1570125909232-eb263c188f7e?w=600' }
+        ];
+
+        let fineDetails = this.fineTypes[this.selectedFineType];
+        let tagText = this.quickTagSelected ? this.quickTagSelected.toUpperCase() : 'QA REJECTED';
+        let newRework = {
+          id: Date.now(),
+          ref: this.activeBusToAudit || 'Bus #101',
+          type: tagText,
+          location: 'Bay ' + Math.floor(Math.random() * 20 + 1),
+          reason: tagText + ' - ' + (this.rejectionNotes || fineDetails.label),
+          amount: fineDetails.amount,
+          fineAccepted: false,
+          retried: false,
+          retryCount: 0,
+          photo: this.attachedPhoto || 'https://images.unsplash.com/photo-1601569420364-7fc1fc4a43bb?w=600'
+        };
+
+        reworks.unshift(newRework);
+        localStorage.setItem('reworks_tickets', JSON.stringify(reworks));
+        
+        alert(`QA Rejected for ${newRework.ref}. Rework ticket and fine of INR ${newRework.amount} sent to Crew Supervisor.`);
+        
+        // Reset state
+        this.auditModalOpen = false;
+        this.quickTagSelected = null;
+        this.rejectionNotes = '';
+        this.attachedPhoto = null;
+        this.selectedFineType = 'shortage';
+      }
     }" x-init="
          darkMode = JSON.parse(localStorage.getItem('darkMode'));
          $watch('darkMode', value => localStorage.setItem('darkMode', JSON.stringify(value)))"
@@ -765,109 +820,166 @@
                 </div>
               </div>
             </div>
-          </div>
-
-          <!-- Daily Cleaning History -->
-          <div x-show="activeTab === 'history'"
+          </div>          <!-- Daily Cleaning History -->
+          <div x-show="activeTab === 'history'" x-data="{ historySubTab: 'vehicle' }"
             class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-800">
-            <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <h3 class="text-lg font-bold text-gray-800 dark:text-white/90">Daily Cleaning History</h3>
-              <div class="flex items-center gap-2" x-data="{ selectedDate: new Date().toISOString().slice(0, 10) }">
-                <input type="date" x-model="selectedDate"
-                  class="h-10 rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 dark:border-gray-700 dark:text-white/90 focus:border-brand-500 focus:outline-hidden focus:ring-1 focus:ring-brand-500">
+            
+            <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-gray-100 dark:border-gray-700 pb-4">
+              <div>
+                <h3 class="text-lg font-bold text-gray-800 dark:text-white/90">Daily Cleaning History Logs</h3>
+                <p class="text-xs text-gray-500 mt-1">Select vehicle or depot history to browse audit logs.</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button @click="historySubTab = 'vehicle'"
+                  class="rounded-lg px-4 py-2 text-xs font-bold transition-all cursor-pointer"
+                  :class="historySubTab === 'vehicle' ? 'bg-brand-500 text-white shadow-sm' : 'bg-gray-150 text-gray-650 hover:bg-gray-200 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800'">
+                  <i class="ph ph-bus mr-1"></i> Vehicles
+                </button>
+                <button @click="historySubTab = 'depot'"
+                  class="rounded-lg px-4 py-2 text-xs font-bold transition-all cursor-pointer"
+                  :class="historySubTab === 'depot' ? 'bg-brand-500 text-white shadow-sm' : 'bg-gray-150 text-gray-650 hover:bg-gray-200 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800'">
+                  <i class="ph ph-warehouse mr-1"></i> Depot Area
+                </button>
               </div>
             </div>
 
-            <div class="overflow-x-auto">
-              <table class="w-full text-left text-sm text-gray-500 dark:text-gray-400">
-                <thead
-                  class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">
-                  <tr>
-                    <th scope="col" class="px-6 py-4">Bus ID</th>
-                    <th scope="col" class="px-6 py-4">Type</th>
-                    <th scope="col" class="px-6 py-4">Cleaning Type</th>
-                    <th scope="col" class="px-6 py-4">Cleaned By</th>
-                    <th scope="col" class="px-6 py-4">Time Taken</th>
-                    <th scope="col" class="px-6 py-4">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                    <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">Bus #102</td>
-                    <td class="px-6 py-4">EV, Single Decker</td>
-                    <td class="px-6 py-4"><span
-                        class="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-bold text-brand-600 dark:bg-brand-500/15 dark:text-brand-500 border border-brand-100 dark:border-brand-800">Quick
-                        Clean</span></td>
-                    <td class="px-6 py-4">Sarah M.</td>
-                    <td class="px-6 py-4">08m 15s</td>
-                    <td class="px-6 py-4"><span
-                        class="rounded bg-success-100 px-2.5 py-0.5 text-xs font-bold text-success-800 dark:bg-success-500/20 dark:text-success-400">QA
-                        Passed</span></td>
-                  </tr>
-                  <tr
-                    class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                    <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">Bus #822</td>
-                    <td class="px-6 py-4">ICE, Double Decker</td>
-                    <td class="px-6 py-4"><span
-                        class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-bold text-gray-600 dark:bg-gray-800 dark:text-gray-400 border border-gray-200 dark:border-gray-700">Deep
-                        Clean</span></td>
-                    <td class="px-6 py-4">John D.</td>
-                    <td class="px-6 py-4">02h 10m</td>
-                    <td class="px-6 py-4"><span
-                        class="rounded bg-success-100 px-2.5 py-0.5 text-xs font-bold text-success-800 dark:bg-success-500/20 dark:text-success-400">QA
-                        Passed</span></td>
-                  </tr>
-                  <tr
-                    class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                    <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">Bus #305</td>
-                    <td class="px-6 py-4">EV, Single Decker</td>
-                    <td class="px-6 py-4"><span
-                        class="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-bold text-brand-600 dark:bg-brand-500/15 dark:text-brand-500 border border-brand-100 dark:border-brand-800">Quick
-                        Clean</span></td>
-                    <td class="px-6 py-4">Mike R.</td>
-                    <td class="px-6 py-4 text-error-500 font-medium">14m 20s</td>
-                    <td class="px-6 py-4"><span
-                        class="rounded bg-success-100 px-2.5 py-0.5 text-xs font-bold text-success-800 dark:bg-success-500/20 dark:text-success-400">QA
-                        Passed</span></td>
-                  </tr>
-                  <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                    <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">Bus #150</td>
-                    <td class="px-6 py-4">ICE, Articulated</td>
-                    <td class="px-6 py-4"><span
-                        class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-bold text-gray-600 dark:bg-gray-800 dark:text-gray-400 border border-gray-200 dark:border-gray-700">Overnight
-                        Clean</span></td>
-                    <td class="px-6 py-4">Team Beta</td>
-                    <td class="px-6 py-4">45m 00s</td>
-                    <td class="px-6 py-4"><span
-                        class="rounded bg-success-100 px-2.5 py-0.5 text-xs font-bold text-success-800 dark:bg-success-500/20 dark:text-success-400">QA
-                        Passed</span></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <!-- Vehicle Cleaning Table -->
+            <div x-show="historySubTab === 'vehicle'">
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm text-gray-500 dark:text-gray-400">
+                  <thead
+                    class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">
+                    <tr>
+                      <th scope="col" class="px-6 py-4">Bus ID</th>
+                      <th scope="col" class="px-6 py-4">Type</th>
+                      <th scope="col" class="px-6 py-4">Cleaning Type</th>
+                      <th scope="col" class="px-6 py-4">Cleaned By</th>
+                      <th scope="col" class="px-6 py-4">Time Taken</th>
+                      <th scope="col" class="px-6 py-4">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                      <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">Bus #102</td>
+                      <td class="px-6 py-4">EV, Single Decker</td>
+                      <td class="px-6 py-4"><span
+                          class="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-bold text-brand-600 dark:bg-brand-500/15 dark:text-brand-500 border border-brand-100 dark:border-brand-800">Quick
+                          Clean</span></td>
+                      <td class="px-6 py-4">Sarah M.</td>
+                      <td class="px-6 py-4">08m 15s</td>
+                      <td class="px-6 py-4"><span
+                          class="rounded bg-success-100 px-2.5 py-0.5 text-xs font-bold text-success-800 dark:bg-success-500/20 dark:text-success-400">QA
+                          Passed</span></td>
+                    </tr>
+                    <tr
+                      class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                      <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">Bus #822</td>
+                      <td class="px-6 py-4">ICE, Double Decker</td>
+                      <td class="px-6 py-4"><span
+                          class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-bold text-gray-600 dark:bg-gray-800 dark:text-gray-400 border border-gray-200 dark:border-gray-700">Deep
+                          Clean</span></td>
+                      <td class="px-6 py-4">John D.</td>
+                      <td class="px-6 py-4">02h 10m</td>
+                      <td class="px-6 py-4"><span
+                          class="rounded bg-success-100 px-2.5 py-0.5 text-xs font-bold text-success-800 dark:bg-success-500/20 dark:text-success-400">QA
+                          Passed</span></td>
+                    </tr>
+                    <tr
+                      class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                      <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">Bus #305</td>
+                      <td class="px-6 py-4">EV, Single Decker</td>
+                      <td class="px-6 py-4"><span
+                          class="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-bold text-brand-600 dark:bg-brand-500/15 dark:text-brand-500 border border-brand-100 dark:border-brand-800">Quick
+                          Clean</span></td>
+                      <td class="px-6 py-4">Mike R.</td>
+                      <td class="px-6 py-4 text-error-500 font-medium">14m 20s</td>
+                      <td class="px-6 py-4"><span
+                          class="rounded bg-success-100 px-2.5 py-0.5 text-xs font-bold text-success-800 dark:bg-success-500/20 dark:text-success-400">QA
+                          Passed</span></td>
+                    </tr>
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                      <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">Bus #150</td>
+                      <td class="px-6 py-4">ICE, Articulated</td>
+                      <td class="px-6 py-4"><span
+                          class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-bold text-gray-600 dark:bg-gray-800 dark:text-gray-400 border border-gray-200 dark:border-gray-700">Overnight
+                          Clean</span></td>
+                      <td class="px-6 py-4">Team Beta</td>
+                      <td class="px-6 py-4">45m 00s</td>
+                      <td class="px-6 py-4"><span
+                          class="rounded bg-success-100 px-2.5 py-0.5 text-xs font-bold text-success-800 dark:bg-success-500/20 dark:text-success-400">QA
+                          Passed</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
 
-            <!-- Pagination (Mock) -->
-            <div class="mt-4 flex items-center justify-between border-t border-gray-200 pt-4 dark:border-gray-700">
-              <span class="text-sm text-gray-500 dark:text-gray-400">Showing <span
-                  class="font-bold text-gray-800 dark:text-white">1</span> to <span
-                  class="font-bold text-gray-800 dark:text-white">4</span> of <span
-                  class="font-bold text-gray-800 dark:text-white">126</span> vehicles</span>
-              <div class="flex gap-1">
-                <button
-                  class="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"><i
-                    class="ph ph-caret-left"></i></button>
-                <button
-                  class="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-brand-600 font-bold dark:bg-brand-500/10 dark:text-brand-400">1</button>
-                <button
-                  class="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700">2</button>
-                <button
-                  class="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700">3</button>
-                <button
-                  class="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"><i
-                    class="ph ph-caret-right"></i></button>
+              <!-- Pagination (Mock) -->
+              <div class="mt-4 flex items-center justify-between border-t border-gray-200 pt-4 dark:border-gray-700">
+                <span class="text-sm text-gray-500 dark:text-gray-400">Showing 1 to 4 of 126 vehicles</span>
+                <div class="flex gap-1">
+                  <button class="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800"><i class="ph ph-caret-left"></i></button>
+                  <button class="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-brand-600 font-bold dark:bg-brand-500/10">1</button>
+                  <button class="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800"><i class="ph ph-caret-right"></i></button>
+                </div>
               </div>
             </div>
+
+            <!-- Depot Cleaning Table -->
+            <div x-show="historySubTab === 'depot'" style="display: none;">
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm text-gray-500 dark:text-gray-400">
+                  <thead
+                    class="bg-gray-55 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">
+                    <tr>
+                      <th scope="col" class="px-6 py-4">Depot Area ID</th>
+                      <th scope="col" class="px-6 py-4">Category</th>
+                      <th scope="col" class="px-6 py-4">Cleaning Frequency</th>
+                      <th scope="col" class="px-6 py-4">Assigned Crew</th>
+                      <th scope="col" class="px-6 py-4">Duration</th>
+                      <th scope="col" class="px-6 py-4">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                      <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">Washing Pit 1</td>
+                      <td class="px-6 py-4">Washing Zone</td>
+                      <td class="px-6 py-4"><span class="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-bold text-blue-600 dark:bg-blue-500/15 border border-blue-100">Daily EOD</span></td>
+                      <td class="px-6 py-4">Vikram Rao (Crew C)</td>
+                      <td class="px-6 py-4 font-semibold">60 mins</td>
+                      <td class="px-6 py-4"><span class="rounded bg-success-100 px-2.5 py-0.5 text-xs font-bold text-success-800 dark:bg-success-500/20 dark:text-success-400">Approved</span></td>
+                    </tr>
+                    <tr class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                      <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">Fueling Bay A</td>
+                      <td class="px-6 py-4">Fueling Zone</td>
+                      <td class="px-6 py-4"><span class="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-bold text-blue-600 dark:bg-blue-500/15 border border-blue-100">Daily EOD</span></td>
+                      <td class="px-6 py-4">Amit Singh (Crew B)</td>
+                      <td class="px-6 py-4 font-semibold">45 mins</td>
+                      <td class="px-6 py-4"><span class="rounded bg-success-100 px-2.5 py-0.5 text-xs font-bold text-success-800 dark:bg-success-500/20 dark:text-success-400">Approved</span></td>
+                    </tr>
+                    <tr class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                      <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">Maintenance Area</td>
+                      <td class="px-6 py-4">Maintenance Zone</td>
+                      <td class="px-6 py-4"><span class="rounded-full bg-purple-50 px-2 py-0.5 text-xs font-bold text-purple-600 dark:bg-purple-500/15 border border-purple-100">Weekly Deep</span></td>
+                      <td class="px-6 py-4">Suresh Patil (Crew A)</td>
+                      <td class="px-6 py-4 font-semibold">120 mins</td>
+                      <td class="px-6 py-4"><span class="rounded bg-success-100 px-2.5 py-0.5 text-xs font-bold text-success-800 dark:bg-success-500/20 dark:text-success-400">Approved</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Pagination (Mock) -->
+              <div class="mt-4 flex items-center justify-between border-t border-gray-200 pt-4 dark:border-gray-700">
+                <span class="text-sm text-gray-500 dark:text-gray-400">Showing 1 to 3 of 15 depot areas</span>
+                <div class="flex gap-1">
+                  <button class="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800"><i class="ph ph-caret-left"></i></button>
+                  <button class="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-brand-600 font-bold dark:bg-brand-500/10">1</button>
+                  <button class="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800"><i class="ph ph-caret-right"></i></button>
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
     </div>
@@ -914,36 +1026,37 @@
         <!-- Standard Bus Photo View -->
         <template x-if="!activeBusToAudit || (!activeBusToAudit.startsWith('data:') && !activeBusToAudit.includes('unsplash.com') && !activeBusToAudit.includes('cloudinary'))">
           <div class="space-y-6">
-            <!-- Floor Photo -->
-            <div class="rounded-2xl border border-gray-200 p-4 dark:border-gray-800">
-              <h4 class="font-bold text-gray-800 dark:text-white mb-3 flex items-center gap-2"><i
-                  class="ph ph-broom text-xl"></i> Floors Swept</h4>
-              <div
-                class="h-48 w-full rounded-xl bg-gray-200 dark:bg-gray-800 flex items-center justify-center overflow-hidden relative">
-                <img src="https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800&auto=format&fit=crop"
-                  class="object-cover w-full h-full opacity-80" alt="Floor">
+            <!-- Completed Activities Checklist -->
+            <div class="rounded-2xl border border-gray-150 p-5 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/40">
+              <h4 class="font-bold text-gray-800 dark:text-white mb-3 flex items-center gap-1.5"><i class="ph ph-list-checks text-brand-500 text-xl"></i> Completed Cleaning Activities</h4>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-success-700 dark:text-success-400 font-semibold">
+                <div class="flex items-center gap-2"><i class="ph ph-check-circle-fill text-base text-success-500"></i> Supplies Gathered</div>
+                <div class="flex items-center gap-2"><i class="ph ph-check-circle-fill text-base text-success-500"></i> Trash & Debris Removed</div>
+                <div class="flex items-center gap-2"><i class="ph ph-check-circle-fill text-base text-success-500"></i> Floors Swept & Cleaned</div>
+                <div class="flex items-center gap-2"><i class="ph ph-check-circle-fill text-base text-success-500"></i> Seats Sanitized & Wiped</div>
+                <div class="flex items-center gap-2"><i class="ph ph-check-circle-fill text-base text-success-500"></i> Touchpoints Disinfected</div>
+                <div class="flex items-center gap-2"><i class="ph ph-check-circle-fill text-base text-success-500"></i> Exterior Pre-rinse & Wash</div>
+                <div class="flex items-center gap-2"><i class="ph ph-check-circle-fill text-base text-success-500"></i> Soap & Scrub Finished</div>
+                <div class="flex items-center gap-2"><i class="ph ph-check-circle-fill text-base text-success-500"></i> Exterior Dried & Checked</div>
               </div>
             </div>
 
-            <!-- Seats Photo -->
-            <div class="rounded-2xl border border-gray-200 p-4 dark:border-gray-800">
-              <h4 class="font-bold text-gray-800 dark:text-white mb-3 flex items-center gap-2"><i
-                  class="ph ph-armchair text-xl"></i> Seats Wiped</h4>
-              <div
-                class="h-48 w-full rounded-xl bg-gray-200 dark:bg-gray-800 flex items-center justify-center overflow-hidden relative">
-                <img src="https://images.unsplash.com/photo-1570125909232-eb263c188f7e?w=800&auto=format&fit=crop"
-                  class="object-cover w-full h-full opacity-80" alt="Seats">
+            <!-- Photos Grid (Interior and Exterior) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <!-- Interior Photo -->
+              <div class="rounded-2xl border border-gray-200 p-4 dark:border-gray-800 bg-white dark:bg-gray-850">
+                <h4 class="font-bold text-gray-800 dark:text-white mb-2 flex items-center gap-1.5"><i class="ph ph-camera text-brand-500"></i> Interior Proof (Rear-to-Front)</h4>
+                <div class="h-40 rounded-xl bg-gray-100 overflow-hidden relative">
+                  <img src="https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=600" class="w-full h-full object-cover">
+                </div>
               </div>
-            </div>
 
-            <!-- Trash Photo -->
-            <div class="rounded-2xl border border-gray-200 p-4 dark:border-gray-800">
-              <h4 class="font-bold text-gray-800 dark:text-white mb-3 flex items-center gap-2"><i
-                  class="ph ph-trash text-xl"></i> Trash & Debris Removed</h4>
-              <div
-                class="h-48 w-full rounded-xl bg-gray-200 dark:bg-gray-800 flex items-center justify-center overflow-hidden relative">
-                <img src="https://images.unsplash.com/photo-1601569420364-7fc1fc4a43bb?w=800&auto=format&fit=crop"
-                  class="object-cover w-full h-full opacity-80" alt="Trash">
+              <!-- Exterior Photo -->
+              <div class="rounded-2xl border border-gray-200 p-4 dark:border-gray-800 bg-white dark:bg-gray-850">
+                <h4 class="font-bold text-gray-800 dark:text-white mb-2 flex items-center gap-1.5"><i class="ph ph-camera text-brand-500"></i> Exterior Proof (Side Ground)</h4>
+                <div class="h-40 rounded-xl bg-gray-100 overflow-hidden relative">
+                  <img src="https://images.unsplash.com/photo-1570125909232-eb263c188f7e?w=600" class="w-full h-full object-cover">
+                </div>
               </div>
             </div>
           </div>
@@ -962,15 +1075,15 @@
     class="fixed inset-0 z-[999999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
     style="display: none;">
     <div @click.outside="auditModalOpen = false"
-      class="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl dark:bg-gray-900 md:p-8">
-      <div class="mb-6 flex items-center justify-between">
+      class="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl dark:bg-gray-900 md:p-8 overflow-y-auto max-h-[90vh]">
+      <div class="mb-6 flex items-center justify-between border-b dark:border-gray-800 pb-3">
         <div class="flex items-center gap-3">
           <div
             class="flex h-12 w-12 items-center justify-center rounded-full bg-error-50 text-error-600 dark:bg-error-500/10 dark:text-error-500">
             <i class="ph ph-warning text-2xl"></i>
           </div>
           <div>
-            <h3 class="text-2xl font-black text-gray-900 dark:text-white">Reject QA</h3>
+            <h3 class="text-2xl font-black text-gray-900 dark:text-white">Reject QA & Apply Fine</h3>
             <p class="text-sm font-medium text-gray-500" x-text="activeBusToAudit"></p>
           </div>
         </div>
@@ -979,42 +1092,64 @@
         </button>
       </div>
 
-      <p class="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Select reason for rejection (Quick-Tags):
-      </p>
+      <p class="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Select reason for rejection (Quick-Tags):</p>
 
-      <div class="grid grid-cols-2 gap-3 mb-6">
+      <div class="grid grid-cols-2 gap-3 mb-4">
         <!-- Tag -->
         <button @click="quickTagSelected = 'trash'"
           :class="quickTagSelected === 'trash' ? 'border-error-500 bg-error-50 text-error-700 dark:bg-error-500/20 dark:text-error-400' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'"
-          class="flex items-center justify-center gap-2 rounded-xl border-2 py-4 text-base font-bold transition-colors">
-          <i class="ph ph-trash text-xl"></i> Trash
+          class="flex items-center justify-center gap-2 rounded-xl border-2 py-3 text-sm font-bold transition-colors">
+          <i class="ph ph-trash text-lg"></i> Trash
         </button>
         <button @click="quickTagSelected = 'spill'"
           :class="quickTagSelected === 'spill' ? 'border-error-500 bg-error-50 text-error-700 dark:bg-error-500/20 dark:text-error-400' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'"
-          class="flex items-center justify-center gap-2 rounded-xl border-2 py-4 text-base font-bold transition-colors">
-          <i class="ph ph-drop text-xl"></i> Spill
+          class="flex items-center justify-center gap-2 rounded-xl border-2 py-3 text-sm font-bold transition-colors">
+          <i class="ph ph-drop text-lg"></i> Spill
         </button>
         <button @click="quickTagSelected = 'smell'"
           :class="quickTagSelected === 'smell' ? 'border-error-500 bg-error-50 text-error-700 dark:bg-error-500/20 dark:text-error-400' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'"
-          class="flex items-center justify-center gap-2 rounded-xl border-2 py-4 text-base font-bold transition-colors">
-          <i class="ph ph-wind text-xl"></i> Smell
+          class="flex items-center justify-center gap-2 rounded-xl border-2 py-3 text-sm font-bold transition-colors">
+          <i class="ph ph-wind text-lg"></i> Smell
         </button>
         <button @click="quickTagSelected = 'damage'"
           :class="quickTagSelected === 'damage' ? 'border-error-500 bg-error-50 text-error-700 dark:bg-error-500/20 dark:text-error-400' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'"
-          class="flex items-center justify-center gap-2 rounded-xl border-2 py-4 text-base font-bold transition-colors">
-          <i class="ph ph-scissors text-xl"></i> Damage
+          class="flex items-center justify-center gap-2 rounded-xl border-2 py-3 text-sm font-bold transition-colors">
+          <i class="ph ph-scissors text-lg"></i> Damage
         </button>
+      </div>
+
+      <div class="mb-4">
+        <label class="mb-2 block text-sm font-bold text-gray-700 dark:text-gray-300">Choose Fine Type</label>
+        <select x-model="selectedFineType" class="w-full rounded-xl border border-gray-300 bg-gray-50 px-4 py-3 text-sm text-gray-800 focus:border-error-500 focus:outline-hidden dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+          <template x-for="(fine, key) in fineTypes" :key="key">
+            <option :value="key" x-text="fine.label + ' (INR ' + fine.amount + ')'"></option>
+          </template>
+        </select>
+      </div>
+
+      <div class="mb-4">
+        <label class="mb-2 block text-sm font-bold text-gray-700 dark:text-gray-300">Attach Audit Proof Photo</label>
+        <label class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 py-3 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-750 transition-colors">
+          <input type="file" accept="image/*" @change="handlePhotoUpload($event)" class="hidden">
+          <i class="ph ph-camera text-xl text-gray-500"></i>
+          <span class="text-sm font-medium text-gray-600 dark:text-gray-400" x-text="attachedPhoto ? 'Photo Uploaded ✓' : 'Upload Proof Photo'"></span>
+        </label>
+        <template x-if="attachedPhoto">
+          <div class="mt-2 text-center">
+            <img :src="attachedPhoto" class="h-20 max-w-full mx-auto rounded-lg object-cover border border-gray-200">
+          </div>
+        </template>
       </div>
 
       <div class="mb-6">
         <label class="mb-2 block text-sm font-bold text-gray-700 dark:text-gray-300">Additional Notes (Optional)</label>
-        <textarea rows="2"
-          class="w-full rounded-xl border border-gray-300 bg-gray-50 px-4 py-3 text-gray-800 focus:border-error-500 focus:ring-4 focus:ring-error-500/20 focus:outline-hidden dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-error-500"></textarea>
+        <textarea x-model="rejectionNotes" rows="2"
+          class="w-full rounded-xl border border-gray-300 bg-gray-50 px-4 py-3 text-sm text-gray-800 focus:border-error-500 focus:ring-4 focus:ring-error-500/20 focus:outline-hidden dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-error-500" placeholder="Describe the specific failure here..."></textarea>
       </div>
 
-      <button @click="auditModalOpen = false; quickTagSelected = null"
+      <button @click="confirmRejection()"
         class="w-full rounded-xl bg-error-600 py-4 text-lg font-extrabold text-white transition-colors hover:bg-error-700">
-        CONFIRM REJECTION
+        CONFIRM REJECTION & SEND FINE
       </button>
     </div>
   </div>

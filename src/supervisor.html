@@ -30,7 +30,67 @@
       darkMode: false, 
       stickyMenu: false, 
       sidebarToggle: false, 
-      scrollTop: false 
+      scrollTop: false,
+      
+      // Materials Tracker State
+      materialSearchQuery: '',
+      materialDateFilter: '2026-06-10',
+      materialLogs: [
+        { date: '2026-06-10', material: 'Disinfectant Liquid', consumed: '12L', loggedBy: 'Suresh Patil (Crew A)', category: 'Daily Consumed' },
+        { date: '2026-06-10', material: 'Microfiber Cloths', consumed: '15 units', loggedBy: 'Amit Singh (Crew B)', category: 'Daily Consumed' },
+        { date: '2026-06-10', material: 'Detergent Soap', consumed: '8L', loggedBy: 'Rajesh Kumar (Crew A)', category: 'Daily Consumed' },
+        { date: '2026-06-09', material: 'Disinfectant Liquid', consumed: '15L', loggedBy: 'Suresh Patil (Crew A)', category: 'Daily Consumed' },
+        { date: '2026-06-09', material: 'Trash Bags (Heavy Duty)', consumed: '30 units', loggedBy: 'Vikram Rao (Crew C)', category: 'Daily Consumed' },
+        { date: '2026-06-09', material: 'Seat Shampoo', consumed: '5L', loggedBy: 'Amit Singh (Crew B)', category: 'Daily Consumed' }
+      ],
+      inventory: [
+        { material: 'Disinfectant Liquid', stock: '85L', unit: 'L' },
+        { material: 'Detergent Soap', stock: '60L', unit: 'L' },
+        { material: 'Microfiber Cloths', stock: '120 units', unit: 'units' },
+        { material: 'Trash Bags (Heavy Duty)', stock: '240 units', unit: 'units' },
+        { material: 'Seat Shampoo', stock: '45L', unit: 'L' }
+      ],
+      eodInput: {
+        disinfectant: '',
+        detergent: '',
+        cloths: '',
+        trashBags: '',
+        shampoo: ''
+      },
+      submitEOD() {
+        if (!this.eodInput.disinfectant && !this.eodInput.detergent && !this.eodInput.cloths && !this.eodInput.trashBags && !this.eodInput.shampoo) {
+          alert('Please enter at least one quantity to submit EOD log.');
+          return;
+        }
+        let date = '2026-06-10';
+        if (this.eodInput.disinfectant) {
+          this.materialLogs.unshift({ date: date, material: 'Disinfectant Liquid', consumed: this.eodInput.disinfectant + 'L', loggedBy: 'Supervisor (EOD Log)', category: 'EOD Consumed' });
+          let item = this.inventory.find(i => i.material === 'Disinfectant Liquid');
+          if (item) item.stock = (parseInt(item.stock) - parseInt(this.eodInput.disinfectant)) + 'L';
+        }
+        if (this.eodInput.detergent) {
+          this.materialLogs.unshift({ date: date, material: 'Detergent Soap', consumed: this.eodInput.detergent + 'L', loggedBy: 'Supervisor (EOD Log)', category: 'EOD Consumed' });
+          let item = this.inventory.find(i => i.material === 'Detergent Soap');
+          if (item) item.stock = (parseInt(item.stock) - parseInt(this.eodInput.detergent)) + 'L';
+        }
+        if (this.eodInput.cloths) {
+          this.materialLogs.unshift({ date: date, material: 'Microfiber Cloths', consumed: this.eodInput.cloths + ' units', loggedBy: 'Supervisor (EOD Log)', category: 'EOD Consumed' });
+          let item = this.inventory.find(i => i.material === 'Microfiber Cloths');
+          if (item) item.stock = (parseInt(item.stock) - parseInt(this.eodInput.cloths)) + ' units';
+        }
+        if (this.eodInput.trashBags) {
+          this.materialLogs.unshift({ date: date, material: 'Trash Bags (Heavy Duty)', consumed: this.eodInput.trashBags + ' units', loggedBy: 'Supervisor (EOD Log)', category: 'EOD Consumed' });
+          let item = this.inventory.find(i => i.material === 'Trash Bags (Heavy Duty)');
+          if (item) item.stock = (parseInt(item.stock) - parseInt(this.eodInput.trashBags)) + ' units';
+        }
+        if (this.eodInput.shampoo) {
+          this.materialLogs.unshift({ date: date, material: 'Seat Shampoo', consumed: this.eodInput.shampoo + 'L', loggedBy: 'Supervisor (EOD Log)', category: 'EOD Consumed' });
+          let item = this.inventory.find(i => i.material === 'Seat Shampoo');
+          if (item) item.stock = (parseInt(item.stock) - parseInt(this.eodInput.shampoo)) + 'L';
+        }
+        this.eodInput = { disinfectant: '', detergent: '', cloths: '', trashBags: '', shampoo: '' };
+        alert('Daily EOD Material consumption report logged successfully and stock inventory levels updated.');
+      }
     }" x-init="
          darkMode = JSON.parse(localStorage.getItem('darkMode'));
          $watch('darkMode', value => localStorage.setItem('darkMode', JSON.stringify(value)))"
@@ -58,6 +118,28 @@
       <!-- ===== Main Content Start ===== -->
       <main>
         <div class="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">
+
+          <!-- Navigation Tabs -->
+          <template x-if="view === 'queue' || view === 'materials'">
+            <div class="mb-6 flex items-center justify-between border-b border-gray-200 dark:border-gray-800 pb-3">
+              <div class="flex gap-6">
+                <button @click="view = 'queue'" class="pb-3 text-lg font-bold transition-all relative cursor-pointer"
+                  :class="view === 'queue' ? 'text-brand-500 border-b-2 border-brand-500' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'">
+                  Active Cleaning Queue
+                </button>
+                <button @click="view = 'materials'" class="pb-3 text-lg font-bold transition-all relative cursor-pointer"
+                  :class="view === 'materials' ? 'text-brand-500 border-b-2 border-brand-500' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'">
+                  Material Section
+                </button>
+              </div>
+              
+              <div class="hidden sm:flex items-center gap-2">
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gray-50 border border-gray-200 text-gray-500 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400">
+                  <i class="ph ph-shield-check text-success-500 mr-1 text-sm"></i> Crew Depot A
+                </span>
+              </div>
+            </div>
+          </template>
 
           <!-- Queue View -->
           <div x-show="view === 'queue'" class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-6">
@@ -780,6 +862,112 @@
               </button>
             </div>
 
+          </div>
+
+          <!-- Material Tracker View -->
+          <div x-show="view === 'materials'" style="display: none;" class="space-y-6">
+            <div class="flex flex-col lg:flex-row gap-6">
+              <!-- Left Column: Log and date filtering -->
+              <div class="flex-1 space-y-6">
+                <!-- Date filtering and list card -->
+                <div class="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-950 shadow-sm">
+                  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                    <div>
+                      <h3 class="text-lg font-bold text-gray-850 dark:text-white">Material Consumption Log</h3>
+                      <p class="text-xs text-gray-500 mt-0.5">Filter by date and view consumed quantities.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                      <select x-model="materialDateFilter" class="rounded-lg border border-gray-300 bg-gray-50 p-2 text-xs text-gray-900 focus:border-brand-500 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                        <option value="2026-06-10">Today (June 10)</option>
+                        <option value="2026-06-09">Yesterday (June 9)</option>
+                      </select>
+                      <input type="text" x-model="materialSearchQuery" class="rounded-lg border border-gray-300 bg-gray-50 p-2 text-xs text-gray-900 focus:border-brand-500 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white" placeholder="Search material...">
+                    </div>
+                  </div>
+
+                  <div class="overflow-x-auto">
+                    <table class="w-full table-auto text-left">
+                      <thead class="bg-gray-55 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-800">
+                        <tr>
+                          <th class="px-4 py-3 font-bold text-xs uppercase text-gray-400">Material Name</th>
+                          <th class="px-4 py-3 font-bold text-xs uppercase text-gray-400">Consumed Qty</th>
+                          <th class="px-4 py-3 font-bold text-xs uppercase text-gray-400">Logged By</th>
+                          <th class="px-4 py-3 font-bold text-xs uppercase text-gray-400">Category</th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-gray-150 dark:divide-gray-850">
+                        <template x-for="log in materialLogs.filter(l => l.date === materialDateFilter && (materialSearchQuery === '' || l.material.toLowerCase().includes(materialSearchQuery.toLowerCase())))" :key="log.material + log.consumed + log.loggedBy">
+                          <tr class="hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors">
+                            <td class="px-4 py-3.5 text-sm font-semibold text-gray-850 dark:text-white" x-text="log.material"></td>
+                            <td class="px-4 py-3.5 text-sm font-bold text-brand-500 dark:text-brand-400" x-text="log.consumed"></td>
+                            <td class="px-4 py-3.5 text-sm text-gray-500 dark:text-gray-400" x-text="log.loggedBy"></td>
+                            <td class="px-4 py-3.5 text-xs">
+                              <span class="px-2 py-0.5 rounded-full font-bold uppercase text-[10px]"
+                                :class="log.category === 'EOD Consumed' ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400 border border-amber-100 dark:border-amber-500/20' : 'bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 border border-blue-100 dark:border-blue-500/20'"
+                                x-text="log.category"></span>
+                            </td>
+                          </tr>
+                        </template>
+                        <template x-if="materialLogs.filter(l => l.date === materialDateFilter && (materialSearchQuery === '' || l.material.toLowerCase().includes(materialSearchQuery.toLowerCase()))).length === 0">
+                          <tr>
+                            <td colspan="4" class="px-4 py-6 text-center text-xs text-gray-400">No logs found for selected filter.</td>
+                          </tr>
+                        </template>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right Column: Current Stock Inventory & EOD Log -->
+              <div class="w-full lg:w-[380px] space-y-6">
+                <!-- Current Stock Card -->
+                <div class="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-950 shadow-sm">
+                  <h3 class="text-base font-bold text-gray-850 dark:text-white mb-4 flex items-center gap-1.5"><i class="ph ph-package text-brand-500"></i> Current Depot Stock</h3>
+                  <div class="space-y-3">
+                    <template x-for="item in inventory" :key="item.material">
+                      <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-900 pb-2">
+                        <span class="text-sm text-gray-550 dark:text-gray-400" x-text="item.material"></span>
+                        <span class="text-sm font-bold text-gray-855 dark:text-white" x-text="item.stock"></span>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+
+                <!-- Daily EOD Submission Form -->
+                <div class="rounded-2xl border border-amber-200 bg-amber-50/20 p-6 dark:border-amber-900/50 dark:bg-amber-500/5 shadow-sm">
+                  <h3 class="text-base font-bold text-amber-800 dark:text-amber-400 mb-2 flex items-center gap-1.5"><i class="ph ph-calendar-check text-amber-500 text-lg"></i> Daily EOD Consumed Form</h3>
+                  <p class="text-xs text-amber-700/80 dark:text-amber-400/80 mb-4 font-medium">Record final consumed materials at EOD to adjust warehouse inventory stock levels.</p>
+                  
+                  <div class="space-y-4">
+                    <div>
+                      <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1.5">Disinfectant Liquid (Liters)</label>
+                      <input type="number" x-model="eodInput.disinfectant" placeholder="e.g. 5" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-amber-500 focus:ring-amber-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                    </div>
+                    <div>
+                      <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1.5">Detergent Soap (Liters)</label>
+                      <input type="number" x-model="eodInput.detergent" placeholder="e.g. 4" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-amber-500 focus:ring-amber-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                    </div>
+                    <div>
+                      <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1.5">Microfiber Cloths (Units)</label>
+                      <input type="number" x-model="eodInput.cloths" placeholder="e.g. 10" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-amber-500 focus:ring-amber-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                    </div>
+                    <div>
+                      <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1.5">Trash Bags (Units)</label>
+                      <input type="number" x-model="eodInput.trashBags" placeholder="e.g. 15" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-amber-500 focus:ring-amber-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                    </div>
+                    <div>
+                      <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1.5">Seat Shampoo (Liters)</label>
+                      <input type="number" x-model="eodInput.shampoo" placeholder="e.g. 2" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-amber-500 focus:ring-amber-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                    </div>
+
+                    <button @click="submitEOD()" class="w-full rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 text-sm transition-colors shadow-md mt-2 flex items-center justify-center gap-1.5 cursor-pointer">
+                      <i class="ph ph-check-square"></i> Submit EOD Log & Deduct Stock
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
         </div>
